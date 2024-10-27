@@ -3,6 +3,8 @@
 #include "Window/Window.h"
 #include <memory>
 
+#include "Rendering/Graphics.h"
+
 class Application
 {
 public:
@@ -18,7 +20,8 @@ private:
 	void Tick();
 
 private:
-	std::unique_ptr<Window> MainWindow;
+	UniquePtr<Window> MainWindow;
+	UniquePtr<Graphics> GraphicsInterface;
 
 	static Application* Instance;
 };
