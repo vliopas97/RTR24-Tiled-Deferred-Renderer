@@ -39,7 +39,8 @@ project "DeferredRenderer"
     links
     {
         "d3d12.lib",
-        "DXGI.lib"
+        "DXGI.lib",
+        "dxguid.lib"
     }
 
     files

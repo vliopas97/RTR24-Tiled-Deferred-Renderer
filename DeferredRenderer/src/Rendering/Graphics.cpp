@@ -122,10 +122,7 @@ void Graphics::CreateDevice()
 
 		if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) continue;
 
-		ID3D12Device5Ptr device;
-		GRAPHICS_ASSERT(D3D12CreateDevice(adapter, D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&device)));
-
-		Device = device;
+		GRAPHICS_ASSERT(D3D12CreateDevice(adapter, D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&Device)));
 	}
 }
 
