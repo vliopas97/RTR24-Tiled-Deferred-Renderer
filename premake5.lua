@@ -28,7 +28,8 @@ project "DeferredRenderer"
     {
         "%{prj.name}/src",
         "%{wks.location}/ThirdParty/dxc",
-        "%{wks.location}/ThirdParty/glm"
+        "%{wks.location}/ThirdParty/glm",
+        "%{wks.location}/ThirdParty/core"
     }
     
     libdirs
@@ -40,7 +41,8 @@ project "DeferredRenderer"
     {
         "d3d12.lib",
         "DXGI.lib",
-        "dxguid.lib"
+        "dxguid.lib",
+        "d3dcompiler.lib"
     }
 
     files
@@ -49,6 +51,26 @@ project "DeferredRenderer"
         "%{prj.name}/src/**.cpp",
         "%{prj.name}/src/**.hlsl"
     }
+
+    filter "files:**.hlsl"
+        shadermodel "6.0"
+        buildmessage 'Compiling HLSL shader %{file.relpath}'
+   
+    filter { "files:**/VertexShaders/*.hlsl" }
+        removeflags "ExcludeFromBuild"
+        shadertype "Vertex"
+        shaderobjectfileoutput 'src/Rendering/Shaders/build/%%(Filename)_VS.cso'
+
+    filter { "files:**/PixelShaders/*.hlsl" }
+        removeflags "ExcludeFromBuild"
+        shadertype "Pixel"
+        shaderobjectfileoutput 'src/Rendering/Shaders/build/%%(Filename)_PS.cso'
+
+    filter {"files:**.hlsli"}
+        flags {"ExcludeFromBuild"}
+
+    filter "action:vs*"
+        buildoptions { "/permissive" }
     
     filter "configurations:Debug"
         runtime "Debug"

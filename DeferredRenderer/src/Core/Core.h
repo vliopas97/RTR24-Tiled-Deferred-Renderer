@@ -19,6 +19,8 @@
 
 #include <string>
 #include <d3d12.h>
+#include <d3dx12.h>
+#include <d3dcompiler.h>
 #include <comdef.h>
 #include <dxgi1_6.h>
 #include <dxgiformat.h>
@@ -33,6 +35,7 @@
 #include <vector>
 
 static constexpr const uint32_t DefaultSwapChainBuffers = 3;
+static constexpr const float aspectRatio = 16.0f / 9.0f;
 
 #define MAKE_SMART_COM_PTR(_a) _COM_SMARTPTR_TYPEDEF(_a, __uuidof(_a))
 MAKE_SMART_COM_PTR(ID3D12Device5);
@@ -47,6 +50,7 @@ MAKE_SMART_COM_PTR(ID3D12Resource);
 MAKE_SMART_COM_PTR(ID3D12DescriptorHeap);
 MAKE_SMART_COM_PTR(ID3D12Debug);
 MAKE_SMART_COM_PTR(ID3D12StateObject);
+MAKE_SMART_COM_PTR(ID3D12PipelineState);
 MAKE_SMART_COM_PTR(ID3D12RootSignature);
 MAKE_SMART_COM_PTR(ID3DBlob);
 MAKE_SMART_COM_PTR(IDxcBlobEncoding);

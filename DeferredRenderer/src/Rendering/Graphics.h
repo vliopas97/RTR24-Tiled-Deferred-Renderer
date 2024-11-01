@@ -12,8 +12,9 @@ struct Graphics
 
 private:
 	void Init();
+    void InitScene();
 	void Shutdown();
-	void EndFrame(UINT index);
+	void PopulateCommandList(UINT frameIndex);
 
 	void CreateDevice();
 	void CreateSwapChain();
@@ -30,6 +31,12 @@ private:
 
 	ID3D12CommandQueuePtr CmdQueue;
     ID3D12GraphicsCommandList4Ptr CmdList;
+
+    ID3D12RootSignaturePtr RootSignature;
+    ID3D12PipelineStatePtr PipelineState;
+    
+    ID3D12ResourcePtr VertexBuffer;
+    D3D12_VERTEX_BUFFER_VIEW VertexBufferView;
 
     ID3D12FencePtr Fence;
     HANDLE FenceEvent;

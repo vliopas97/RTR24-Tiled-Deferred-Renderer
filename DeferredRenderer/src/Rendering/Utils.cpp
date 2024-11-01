@@ -1,6 +1,42 @@
 #include "Utils.h"
 #include "Core/Exception.h"
 
+#include <codecvt>
+
+std::wstring string_2_wstring(const std::string& s)
+{
+	int size_needed = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), (int)s.size(), NULL, 0);
+	std::wstring ws(size_needed, 0);
+	MultiByteToWideChar(CP_UTF8, 0, s.c_str(), (int)s.size(), &ws[0], size_needed);
+	return ws;
+}
+
+std::string wstring_2_string(const std::wstring& ws)
+{
+	int size_needed = WideCharToMultiByte(CP_UTF8, 0, ws.c_str(), (int)ws.size(), NULL, 0, NULL, NULL);
+	std::string s(size_needed, 0);
+	WideCharToMultiByte(CP_UTF8, 0, ws.c_str(), (int)ws.size(), &s[0], size_needed, NULL, NULL);
+	return s;
+}
+
+std::wstring GetCurrentPath()
+{
+	std::string currentDir = std::string(std::source_location::current().file_name());
+	currentDir = currentDir.substr(0, currentDir.find_last_of("\\/"));
+	return std::wstring(currentDir.begin(), currentDir.end()) + L"\\Shaders\\build\\";
+}
+
+ID3DBlobPtr GetShaderBlob(const std::string& shaderName, D3D::ShaderType type)
+{
+	ID3DBlobPtr blob;
+
+	auto path = GetCurrentPath();
+	std::wstring typeStr = type == D3D::ShaderType::Pixel ? L"_PS" : L"_VS";
+	path += std::wstring(shaderName.begin(), shaderName.end()) + typeStr + L".cso";
+	D3DReadFileToBlob(path.c_str(), &blob);
+	return blob;
+}
+
 ID3D12DescriptorHeapPtr D3D::CreateDescriptorHeap(ID3D12Device5Ptr device, uint32_t count, D3D12_DESCRIPTOR_HEAP_TYPE type, bool shaderVisible)
 {
 	D3D12_DESCRIPTOR_HEAP_DESC desc{};
@@ -54,4 +90,21 @@ uint64_t D3D::SubmitCommandList(ID3D12GraphicsCommandList4Ptr cmdList, ID3D12Com
 	cmdQueue->ExecuteCommandLists(1, &list);
 	cmdQueue->Signal(fence, ++fenceValue);
 	return fenceValue;
+}
+
+ID3D12RootSignaturePtr D3D::CreateRootSignature(ID3D12Device5Ptr pDevice,
+										   const D3D12_ROOT_SIGNATURE_DESC& desc)
+{
+	ID3DBlobPtr sigBlob;
+	ID3DBlobPtr errorBlob;
+	HRESULT hr = D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &sigBlob, &errorBlob);
+	if (FAILED(hr))
+	{
+		std::string msg = convertBlobToString(errorBlob.GetInterfacePtr());
+		MessageBoxA(NULL, msg.c_str(), "Error", MB_OK);
+		return nullptr;
+	}
+	ID3D12RootSignaturePtr rootSig;
+	GRAPHICS_ASSERT(pDevice->CreateRootSignature(0, sigBlob->GetBufferPointer(), sigBlob->GetBufferSize(), IID_PPV_ARGS(&rootSig)));
+	return rootSig;
 }
