@@ -25,6 +25,12 @@ void Application::Init(int width, int height, HINSTANCE instance, const char* ti
 	Instance = new Application(width, height, instance, title);
 }
 
+void Application::Shutdown()
+{
+	assert(Instance && "App instance already deleted");
+	delete Instance;
+}
+
 void Application::Tick()
 {
 	GraphicsInterface->Tick();
@@ -34,7 +40,7 @@ Application::Application(int width, int height, HINSTANCE instance, const char* 
 	:MainWindow(MakeUnique<Window>(width, height, instance, title)),
 	GraphicsInterface(MakeUnique<Graphics>(*MainWindow))
 {
-	assert(!Instance && "App instance not initialized");
+	assert(!Instance && "App instance already initialized");
 	Instance = this;
 	auto cursor = LoadCursor(nullptr, IDC_ARROW);
 }

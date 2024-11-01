@@ -11,6 +11,7 @@ public:
 	static Application& GetApp();
 	int Run();
 	static void Init(int width, int height, HINSTANCE instance, const char* title);
+	static void Shutdown();
 
 private:
 	Application(int width, int height, HINSTANCE instance, const char* title);

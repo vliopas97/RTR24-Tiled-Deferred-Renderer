@@ -13,5 +13,6 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 		msg = application.Run();
 		);
 
+	Application::Shutdown();
 	return msg;
 }

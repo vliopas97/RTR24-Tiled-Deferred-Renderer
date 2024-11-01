@@ -47,6 +47,7 @@ private:
         ID3D12DescriptorHeapPtr Heap;
         uint32_t UsedEntries = 0;
     };
+
     HeapData RTVHeap;
     static const uint32_t RTVHeapSize = 3;
 };

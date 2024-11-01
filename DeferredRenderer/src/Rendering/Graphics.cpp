@@ -72,21 +72,6 @@ void Graphics::Shutdown()
 	CmdQueue->Signal(Fence, ++FenceValue);
 	Fence->SetEventOnCompletion(FenceValue, FenceEvent);
 	WaitForSingleObject(FenceEvent, INFINITE);
-
-	for (uint32_t i = 0; i < DefaultSwapChainBuffers; i++)
-	{
-		FrameObjects[i].SwapChainBuffer.Release();
-		FrameObjects[i].CmdAllocator.Release();
-	}
-	
-	RTVHeap.Heap.Release();
-	CmdList.Release();
-	CmdQueue.Release();
-	Fence.Release();
-	SwapChain.Release();
-	Device.Release();
-	Debug.Release();
-	Factory.Release();
 }
 
 void Graphics::EndFrame(UINT index)
@@ -97,7 +82,7 @@ void Graphics::EndFrame(UINT index)
 						 D3D12_RESOURCE_STATE_PRESENT);
 
 	FenceValue = D3D::SubmitCommandList(CmdList, CmdQueue, Fence, FenceValue);
-	SwapChain->Present(0, 0);
+	SwapChain->Present(1, 0);
 
 	uint32_t bufferIndex = SwapChain->GetCurrentBackBufferIndex();
 
