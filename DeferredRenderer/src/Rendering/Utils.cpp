@@ -19,24 +19,6 @@ std::string wstring_2_string(const std::wstring& ws)
 	return s;
 }
 
-std::wstring GetCurrentPath()
-{
-	std::string currentDir = std::string(std::source_location::current().file_name());
-	currentDir = currentDir.substr(0, currentDir.find_last_of("\\/"));
-	return std::wstring(currentDir.begin(), currentDir.end()) + L"\\Shaders\\build\\";
-}
-
-ID3DBlobPtr GetShaderBlob(const std::string& shaderName, D3D::ShaderType type)
-{
-	ID3DBlobPtr blob;
-
-	auto path = GetCurrentPath();
-	std::wstring typeStr = type == D3D::ShaderType::Pixel ? L"_PS" : L"_VS";
-	path += std::wstring(shaderName.begin(), shaderName.end()) + typeStr + L".cso";
-	D3DReadFileToBlob(path.c_str(), &blob);
-	return blob;
-}
-
 ID3D12DescriptorHeapPtr D3D::CreateDescriptorHeap(ID3D12Device5Ptr device, uint32_t count, D3D12_DESCRIPTOR_HEAP_TYPE type, bool shaderVisible)
 {
 	D3D12_DESCRIPTOR_HEAP_DESC desc{};

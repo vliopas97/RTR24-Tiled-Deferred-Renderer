@@ -45,12 +45,6 @@ namespace D3D
 											const D3D12_ROOT_SIGNATURE_DESC& desc);
 
 	// Shaders!!!!!!!!!!!
-	enum class ShaderType
-	{
-		Vertex = 0,
-		Pixel,
-		Size
-	};
 
 	struct Vertex
 	{
@@ -58,8 +52,3 @@ namespace D3D
 		glm::float4 color;
 	};
 }
-
-// For Shaders - To be moved in separate file!!!!
-std::wstring GetCurrentPath();
-ID3DBlobPtr GetShaderBlob(const std::string& shaderName, D3D::ShaderType type);
-// !!!!!!!!!!!!!

@@ -1,6 +1,7 @@
 #include "Graphics.h"
 #include "Core/Exception.h"
 #include "Utils.h"
+#include "Shader.h"
 
 Graphics::Graphics(Window& window)
 	:WinHandle(window.Handle), SwapChainSize(window.Width, window.Height)
@@ -77,8 +78,8 @@ void Graphics::InitScene()
 
 	RootSignature = D3D::CreateRootSignature(Device, rootSignatureDesc);
 
-	auto vertexShader = GetShaderBlob("Shader", D3D::ShaderType::Vertex);
-	auto pixelShader = GetShaderBlob("Shader", D3D::ShaderType::Pixel);
+	Shader<Vertex> vertexShader("Shader");
+	Shader<Pixel> pixelShader("Shader");
 
 	// Define the vertex input layout.
 	D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
@@ -91,8 +92,8 @@ void Graphics::InitScene()
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 	psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
 	psoDesc.pRootSignature = RootSignature.GetInterfacePtr();
-	psoDesc.VS = CD3DX12_SHADER_BYTECODE(vertexShader.GetInterfacePtr());
-	psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.GetInterfacePtr());
+	psoDesc.VS = CD3DX12_SHADER_BYTECODE(vertexShader.GetBlob());
+	psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.GetBlob());
 	psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 	psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 	psoDesc.DepthStencilState.DepthEnable = FALSE;
