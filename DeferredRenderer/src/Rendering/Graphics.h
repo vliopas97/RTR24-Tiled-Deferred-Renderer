@@ -2,6 +2,7 @@
 
 #include "Core/Core.h"
 #include "Window/Window.h"
+#include "Buffer.h"
 
 struct Graphics
 {
@@ -35,8 +36,9 @@ private:
     ID3D12RootSignaturePtr RootSignature;
     ID3D12PipelineStatePtr PipelineState;
     
-    ID3D12ResourcePtr VertexBuffer;
+    //ID3D12ResourcePtr VertexBuffer;
     D3D12_VERTEX_BUFFER_VIEW VertexBufferView;
+    VertexBuffer customBuffer;
 
     ID3D12FencePtr Fence;
     HANDLE FenceEvent;

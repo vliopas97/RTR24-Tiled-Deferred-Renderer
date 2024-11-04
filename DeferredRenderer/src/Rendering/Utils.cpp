@@ -90,3 +90,28 @@ ID3D12RootSignaturePtr D3D::CreateRootSignature(ID3D12Device5Ptr pDevice,
 	GRAPHICS_ASSERT(pDevice->CreateRootSignature(0, sigBlob->GetBufferPointer(), sigBlob->GetBufferSize(), IID_PPV_ARGS(&rootSig)));
 	return rootSig;
 }
+
+ID3D12ResourcePtr CreateBuffer(ID3D12Device5Ptr device,
+							   uint64_t size,
+							   D3D12_RESOURCE_FLAGS flags,
+							   D3D12_RESOURCE_STATES initState,
+							   const D3D12_HEAP_PROPERTIES& heapProperties)
+{
+	D3D12_RESOURCE_DESC desc{};
+	desc.Alignment = 0;
+	desc.DepthOrArraySize = 1;
+	desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	desc.Flags = flags;
+	desc.Format = DXGI_FORMAT_UNKNOWN;
+	desc.Height = 1;
+	desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+	desc.MipLevels = 1;
+	desc.SampleDesc.Count = 1;
+	desc.SampleDesc.Quality = 0;
+	desc.Width = size;
+
+	ID3D12ResourcePtr buffer;
+	GRAPHICS_ASSERT(device->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &desc,
+													initState, nullptr, IID_PPV_ARGS(&buffer)));
+	return buffer;
+}

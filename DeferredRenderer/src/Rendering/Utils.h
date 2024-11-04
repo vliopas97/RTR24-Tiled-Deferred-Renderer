@@ -16,6 +16,20 @@ std::string convertBlobToString(BlotType* pBlob)
 	return std::string(infoLog.data());
 }
 
+template<typename T>
+concept IsContainer = requires(T container)
+{
+	{ container.size() } ->std::same_as<std::size_t>;
+	container.data();
+	typename T::value_type;
+};
+
+template <typename Fn, typename... Args>
+concept ValidResourceFactory = requires(Fn fn, Args... args)
+{
+	std::is_invocable_v<Fn, Args...>&& IsContainer<std::invoke_result_t<Fn, Args...>>;
+};
+
 namespace D3D
 {
 	ID3D12DescriptorHeapPtr CreateDescriptorHeap(ID3D12Device5Ptr device,
@@ -44,11 +58,47 @@ namespace D3D
 	ID3D12RootSignaturePtr CreateRootSignature(ID3D12Device5Ptr pDevice,
 											const D3D12_ROOT_SIGNATURE_DESC& desc);
 
-	// Shaders!!!!!!!!!!!
+	ID3D12ResourcePtr CreateBuffer(ID3D12Device5Ptr device,
+								   uint64_t size,
+								   D3D12_RESOURCE_FLAGS flags,
+								   D3D12_RESOURCE_STATES initState,
+								   const D3D12_HEAP_PROPERTIES& heapProperties);
 
-	struct Vertex
+	template<typename Container>
+	requires IsContainer<Container>
+	ID3D12ResourcePtr CreateAndInitializeBuffer(ID3D12Device5Ptr device,
+												D3D12_RESOURCE_FLAGS flags,
+												D3D12_RESOURCE_STATES initState,
+												const D3D12_HEAP_PROPERTIES& heapProperties,
+												Container data)
 	{
-		glm::float3 position;
-		glm::float4 color;
-	};
+		using Type = decltype(data)::value_type;
+		ID3D12ResourcePtr pBuffer = CreateBuffer(device, sizeof(Type) * data.size(), flags, initState, heapProperties);
+
+		uint8_t* pData;
+		pBuffer->Map(0, nullptr, (void**)&pData);
+		std::memcpy(pData, data.data(), sizeof(Type) * data.size());
+		pBuffer->Unmap(0, nullptr);
+		return pBuffer;
+	}
+
+	template<typename Fn, typename... Args>
+	requires ValidResourceFactory<Fn, Args...>
+	ID3D12ResourcePtr CreateAndInitializeBuffer(ID3D12Device5Ptr device,
+												D3D12_RESOURCE_FLAGS flags,
+												D3D12_RESOURCE_STATES initState,
+												const D3D12_HEAP_PROPERTIES& heapProperties,
+												Fn f, Args... args)
+	{
+		auto data = f(args...);
+
+		using Type = decltype(data)::value_type;
+		ID3D12ResourcePtr pBuffer = CreateBuffer(device, sizeof(Type) * data.size(), flags, initState, heapProperties);
+
+		uint8_t* pData;
+		pBuffer->Map(0, nullptr, (void**)&pData);
+		std::memcpy(pData, data.data(), sizeof(Type) * data.size());
+		pBuffer->Unmap(0, nullptr);
+		return pBuffer;
+	}
 }
