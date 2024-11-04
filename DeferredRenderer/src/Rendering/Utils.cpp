@@ -1,5 +1,6 @@
 #include "Utils.h"
 #include "Core/Exception.h"
+#include "Shader.h"
 
 #include <codecvt>
 
@@ -89,6 +90,60 @@ ID3D12RootSignaturePtr D3D::CreateRootSignature(ID3D12Device5Ptr pDevice,
 	ID3D12RootSignaturePtr rootSig;
 	GRAPHICS_ASSERT(pDevice->CreateRootSignature(0, sigBlob->GetBufferPointer(), sigBlob->GetBufferSize(), IID_PPV_ARGS(&rootSig)));
 	return rootSig;
+}
+
+ID3D12RootSignaturePtr D3D::InitializeGlobalRootSignature(ID3D12Device5Ptr device)
+{
+	std::array<D3D12_DESCRIPTOR_RANGE, 1> uavRanges = {};
+	std::array<D3D12_DESCRIPTOR_RANGE, NumGlobalSRVDescriptorRanges> srvRanges = {};
+	std::array<D3D12_DESCRIPTOR_RANGE, 1> cbvRanges = {};
+
+	uavRanges[0].BaseShaderRegister = 0;
+	uavRanges[0].NumDescriptors = 2;
+	uavRanges[0].RegisterSpace = 0;
+	uavRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+
+	uint32_t userStart = NumGlobalSRVDescriptorRanges - NumUserDescriptorRanges;
+	for (uint32_t i = 0; i < NumGlobalSRVDescriptorRanges; ++i)
+	{
+		auto& descElement = srvRanges[i];
+		descElement.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+		descElement.NumDescriptors = UINT_MAX;
+		descElement.BaseShaderRegister = 0;
+		descElement.RegisterSpace = i;
+		descElement.OffsetInDescriptorsFromTableStart = 0;
+		if (i >= userStart)
+			descElement.RegisterSpace = (i - userStart) + 100;
+	}
+
+	cbvRanges[0].BaseShaderRegister = 0;
+	cbvRanges[0].NumDescriptors = 1;
+	cbvRanges[0].RegisterSpace = 0;
+	cbvRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+
+	std::array<D3D12_ROOT_PARAMETER, RootParamTypesSize - 2> rootParams;
+
+	rootParams[StandardDescriptors].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	rootParams[StandardDescriptors].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+	rootParams[StandardDescriptors].DescriptorTable.NumDescriptorRanges = static_cast<UINT>(srvRanges.size());
+	rootParams[StandardDescriptors].DescriptorTable.pDescriptorRanges = srvRanges.data();
+
+	rootParams[UAVDescriptor].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	rootParams[UAVDescriptor].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+	rootParams[UAVDescriptor].DescriptorTable.NumDescriptorRanges = static_cast<UINT>(uavRanges.size());
+	rootParams[UAVDescriptor].DescriptorTable.pDescriptorRanges = uavRanges.data();
+
+	rootParams[CBuffer].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	rootParams[CBuffer].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+	rootParams[CBuffer].DescriptorTable.NumDescriptorRanges = static_cast<UINT>(cbvRanges.size());
+	rootParams[CBuffer].DescriptorTable.pDescriptorRanges = cbvRanges.data();
+
+	D3D12_ROOT_SIGNATURE_DESC desc{};
+	desc.NumParameters = static_cast<UINT>(rootParams.size());
+	desc.pParameters = rootParams.data();
+	desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+
+	return D3D::CreateRootSignature(device, desc);
 }
 
 ID3D12ResourcePtr CreateBuffer(ID3D12Device5Ptr device,

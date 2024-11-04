@@ -7,6 +7,10 @@ Graphics::Graphics(Window& window)
 	:WinHandle(window.Handle), SwapChainSize(window.Width, window.Height)
 {
 	Init();
+
+	RootSignature rootSignature(Device, D3D::InitializeGlobalRootSignature(Device));
+	PipelineBindings.Initialize(Device, rootSignature);
+
 	InitScene();
 }
 
@@ -15,9 +19,13 @@ Graphics::~Graphics()
 	Shutdown();
 }
 
-void Graphics::Tick()
+void Graphics::Tick(float delta)
 {
 	uint32_t frameIndex = SwapChain->GetCurrentBackBufferIndex();
+
+	// Update Pipeline Constants
+	PipelineBindings.GlobalConstantsData.CameraPosition.x += 0.01f;
+	PipelineBindings.Tick();
 
 	PopulateCommandList(frameIndex);
 	SwapChain->Present(1, 0);
@@ -73,11 +81,6 @@ void Graphics::Init()
 
 void Graphics::InitScene()
 {
-	CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
-	rootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
-
-	RootSignature = D3D::CreateRootSignature(Device, rootSignatureDesc);
-
 	Shader<Vertex> vertexShader("Shader");
 	Shader<Pixel> pixelShader("Shader");
 
@@ -91,12 +94,12 @@ void Graphics::InitScene()
 
 	BufferLayout layout{ {"POSITION", DataType::float3},
 						{"COLOR", DataType::float4} };
-	customBuffer = VertexBuffer(Device, triangleVertices, layout);
+	VBuffer = VertexBuffer(Device, triangleVertices, layout);
 
 	// Describe and create the graphics pipeline state object (PSO).
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
-	psoDesc.InputLayout = customBuffer.GetLayout();
-	psoDesc.pRootSignature = RootSignature.GetInterfacePtr();
+	psoDesc.InputLayout = VBuffer.GetLayout();
+	psoDesc.pRootSignature = PipelineBindings.GetRootSignaturePtr();
 	psoDesc.VS = CD3DX12_SHADER_BYTECODE(vertexShader.GetBlob());
 	psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.GetBlob());
 	psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
@@ -115,6 +118,8 @@ void Graphics::InitScene()
 	CmdQueue->Signal(Fence, ++FenceValue);
 	Fence->SetEventOnCompletion(FenceValue, FenceEvent);
 	WaitForSingleObject(FenceEvent, INFINITE);
+
+	CreateShaderResources();
 }
 
 void Graphics::Shutdown()
@@ -133,6 +138,8 @@ void Graphics::PopulateCommandList(UINT frameIndex)
 						 D3D12_RESOURCE_STATE_PRESENT,
 						 D3D12_RESOURCE_STATE_RENDER_TARGET);
 
+	PipelineBindings.Bind(CmdList);
+
 	D3D12_VIEWPORT viewport = { 0.0f, 0.0f, (FLOAT)SwapChainSize.x, (FLOAT)SwapChainSize.y, 0.0f, 1.0f };
 	CmdList->RSSetViewports(1, &viewport);
 
@@ -140,14 +147,12 @@ void Graphics::PopulateCommandList(UINT frameIndex)
 	D3D12_RECT scissorRect = { 0, 0, SwapChainSize.x, SwapChainSize.y };
 	CmdList->RSSetScissorRects(1, &scissorRect);
 
-	CmdList->SetGraphicsRootSignature(RootSignature.GetInterfacePtr());
-	
 	const float clearColor[4] = { 0.4f, 0.6f, 0.2f, 1.0f };
 	CmdList->OMSetRenderTargets(1, &FrameObjects[frameIndex].RTVHandle, FALSE, nullptr);
 	CmdList->ClearRenderTargetView(FrameObjects[frameIndex].RTVHandle, clearColor, 0, nullptr);
 
 	CmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	CmdList->IASetVertexBuffers(0, 1, &customBuffer.GetView());
+	CmdList->IASetVertexBuffers(0, 1, &VBuffer.GetView());
 	CmdList->DrawInstanced(3, 1, 0, 0);
 
 
@@ -191,4 +196,9 @@ void Graphics::CreateSwapChain()
 	GRAPHICS_ASSERT(Factory->CreateSwapChainForHwnd(CmdQueue, WinHandle, &desc, nullptr, nullptr, &swapChain));
 
 	GRAPHICS_ASSERT(swapChain->QueryInterface(IID_PPV_ARGS(&SwapChain)));
+}
+
+void Graphics::CreateShaderResources()
+{
+
 }

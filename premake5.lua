@@ -49,13 +49,14 @@ project "DeferredRenderer"
     {
         "%{prj.name}/src/**.h",
         "%{prj.name}/src/**.cpp",
-        "%{prj.name}/src/**.hlsl"
+        "%{prj.name}/src/**.hlsl",
+        "%{prj.name}/src/**.hlsli"
     }
 
     filter "files:**.hlsl"
         shadermodel "6.0"
         buildmessage 'Compiling HLSL shader %{file.relpath}'
-   
+
     filter { "files:**/VertexShaders/*.hlsl" }
         removeflags "ExcludeFromBuild"
         shadertype "Vertex"

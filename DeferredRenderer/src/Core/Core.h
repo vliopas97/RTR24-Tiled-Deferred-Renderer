@@ -37,6 +37,10 @@
 static constexpr const uint32_t DefaultSwapChainBuffers = 3;
 static constexpr const float aspectRatio = 16.0f / 9.0f;
 
+// Globals
+constexpr const uint32_t NumUserDescriptorRanges = 16;
+constexpr const uint32_t NumGlobalSRVDescriptorRanges = 7 + NumUserDescriptorRanges;
+
 #define MAKE_SMART_COM_PTR(_a) _COM_SMARTPTR_TYPEDEF(_a, __uuidof(_a))
 MAKE_SMART_COM_PTR(ID3D12Device5);
 MAKE_SMART_COM_PTR(ID3D12GraphicsCommandList4);

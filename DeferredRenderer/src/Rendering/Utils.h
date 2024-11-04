@@ -3,6 +3,7 @@
 #include <source_location>
 
 #define arraysize(a) (sizeof(a)/sizeof(a[0]))
+#define align_to(_alignment, _val) (((_val + _alignment - 1) / _alignment) * _alignment)
 
 std::wstring string_2_wstring(const std::string& s);
 std::string wstring_2_string(const std::wstring& ws);
@@ -101,4 +102,6 @@ namespace D3D
 		pBuffer->Unmap(0, nullptr);
 		return pBuffer;
 	}
+
+	ID3D12RootSignaturePtr InitializeGlobalRootSignature(ID3D12Device5Ptr device);
 }

@@ -1,3 +1,5 @@
+#include "..\Common.hlsli"
+
 struct PSInput
 {
     float4 position : SV_POSITION;
@@ -8,6 +10,7 @@ PSInput main(float3 position : POSITION, float4 color : COLOR)
 {
     PSInput result;
     result.position = float4(position, 1.0f);
+    result.position.x += globalConstants.CameraPosition.x;
     result.color = color;
     return result;
 }

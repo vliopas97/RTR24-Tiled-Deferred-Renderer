@@ -3,13 +3,14 @@
 #include "Core/Core.h"
 #include "Window/Window.h"
 #include "Buffer.h"
+#include "Shader.h"
 
 struct Graphics
 {
 	Graphics(Window& window);
 	~Graphics();
 
-	void Tick();
+	void Tick(float delta);
 
 private:
 	void Init();
@@ -19,6 +20,8 @@ private:
 
 	void CreateDevice();
 	void CreateSwapChain();
+
+    void CreateShaderResources();
 
 private:
     HWND WinHandle{ nullptr };
@@ -33,12 +36,10 @@ private:
 	ID3D12CommandQueuePtr CmdQueue;
     ID3D12GraphicsCommandList4Ptr CmdList;
 
-    ID3D12RootSignaturePtr RootSignature;
+    PipelineStateBindings PipelineBindings;
     ID3D12PipelineStatePtr PipelineState;
     
-    //ID3D12ResourcePtr VertexBuffer;
-    D3D12_VERTEX_BUFFER_VIEW VertexBufferView;
-    VertexBuffer customBuffer;
+    VertexBuffer VBuffer;
 
     ID3D12FencePtr Fence;
     HANDLE FenceEvent;
