@@ -48,17 +48,44 @@ void Application::Shutdown()
 	delete Instance;
 }
 
+void Application::OnEvent(Event& e)
+{
+	MainWindow->OnEvent(e);
+}
+
 void Application::Tick()
 {
 	float delta = Benchmarker.GetAndReset();
 	GraphicsInterface->Tick(delta);
+
+	if (MainWindow->Input.IsKeyPressed(VK_F1))
+	{
+		if (MainWindow->IsCursorVisible())
+		{
+			MainWindow->HideCursor();
+			MainWindow->Input.SetRawInput(true);
+		}
+		else
+		{
+			MainWindow->ShowCursor();
+			MainWindow->Input.SetRawInput(false);
+		}
+	}
+
+	if (MainWindow->Input.IsKeyPressed(VK_ESCAPE))
+		PostQuitMessage(0);
 }
 
 Application::Application(int width, int height, HINSTANCE instance, const char* title)
-	:MainWindow(MakeUnique<Window>(width, height, instance, title)),
-	GraphicsInterface(MakeUnique<Graphics>(*MainWindow))
+	:MainWindow(MakeUnique<Window>(width, height, instance, title))
 {
 	assert(!Instance && "App instance already initialized");
 	Instance = this;
 	auto cursor = LoadCursor(nullptr, IDC_ARROW);
+
+	MainWindow->SetEventCallbackFunction([this](Event& e)
+										 {
+											 OnEvent(e);
+										 });
+	GraphicsInterface = std::make_unique<Graphics>(*MainWindow);
 }

@@ -4,7 +4,7 @@
 #include "Shader.h"
 
 Graphics::Graphics(Window& window)
-	:WinHandle(window.Handle), SwapChainSize(window.Width, window.Height)
+	:WinHandle(window.Handle), SwapChainSize(window.Width, window.Height), SceneCamera()
 {
 	Init();
 
@@ -24,7 +24,9 @@ void Graphics::Tick(float delta)
 	uint32_t frameIndex = SwapChain->GetCurrentBackBufferIndex();
 
 	// Update Pipeline Constants
-	PipelineBindings.GlobalConstantsData.CameraPosition.x += 0.01f;
+	SceneCamera.Tick(delta);
+	PipelineBindings.GlobalConstantsData.CameraPosition = SceneCamera.GetPosition();
+	PipelineBindings.GlobalConstantsData.ViewProjection = (SceneCamera.GetViewProjection());
 	PipelineBindings.Tick();
 
 	PopulateCommandList(frameIndex);
@@ -86,9 +88,9 @@ void Graphics::InitScene()
 
 	std::vector<VertexElement> triangleVertices =
 	{
-		{ { 0.0f, 0.25f * aspectRatio, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
-		{ { 0.25f, -0.25f * aspectRatio, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
-		{ { -0.25f, -0.25f * aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } }
+		{ { 0.0f, 1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
+		{ { 1.0f, -1.0f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
+		{ { -1.0f, -1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } }
 	};
 	auto size = sizeof(triangleVertices);
 

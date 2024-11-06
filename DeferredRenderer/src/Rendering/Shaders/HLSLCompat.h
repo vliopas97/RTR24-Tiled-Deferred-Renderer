@@ -23,7 +23,7 @@ using namespace glm;
 struct PipelineConstants
 {
 	vec3 CameraPosition;
-	ALIGNAS(16) mat4x4 ViewProjectionInv;
+	ALIGNAS(16) mat4x4 ViewProjection;
 };
 
 

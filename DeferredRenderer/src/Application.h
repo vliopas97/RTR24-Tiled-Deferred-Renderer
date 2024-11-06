@@ -24,6 +24,9 @@ public:
 	static void Init(int width, int height, HINSTANCE instance, const char* title);
 	static void Shutdown();
 
+	const UniquePtr<Window>& GetWindow() { return MainWindow; }
+	void OnEvent(Event& e);
+
 private:
 	Application(int width, int height, HINSTANCE instance, const char* title);
 	Application(const Application&) = delete;

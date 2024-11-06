@@ -1,9 +1,10 @@
 #pragma once
 
-#include "Core/Core.h"
-#include "Window/Window.h"
 #include "Buffer.h"
+#include "Camera.h"
+#include "Core/Core.h"
 #include "Shader.h"
+#include "Window/Window.h"
 
 struct Graphics
 {
@@ -60,5 +61,7 @@ private:
 
     HeapData RTVHeap;
     static const uint32_t RTVHeapSize = 3;
+
+    Camera SceneCamera;
 };
 
