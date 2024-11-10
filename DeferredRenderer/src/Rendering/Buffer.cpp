@@ -117,7 +117,8 @@ void IndexBuffer::Init(ID3D12Device5Ptr device, const std::vector<uint32_t>& ind
 
 void IndexBuffer::InitImpl(ID3D12Device5Ptr device, const std::vector<uint32_t>& indices)
 {
-	const UINT bufferSize = static_cast<UINT>(indices.size() * sizeof(uint32_t));
+	IndexCount = indices.size();
+	const UINT bufferSize = static_cast<UINT>(sizeof(uint32_t) * IndexCount);
 
 	Buffer = D3D::CreateBuffer(device, bufferSize, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_HEAP_TYPE_UPLOAD);
 

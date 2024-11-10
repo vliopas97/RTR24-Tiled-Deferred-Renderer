@@ -5,6 +5,8 @@
 #include "Core/Core.h"
 #include "Shader.h"
 #include "Window/Window.h"
+#include "Actors/Actor.h"
+#include "Scene.h"
 
 struct Graphics
 {
@@ -40,8 +42,7 @@ private:
     PipelineStateBindings PipelineBindings;
     ID3D12PipelineStatePtr PipelineState;
     
-    VertexBuffer VBuffer;
-    IndexBuffer IBuffer;
+    UniquePtr<Scene> MainScene;
 
     ID3D12FencePtr Fence;
     HANDLE FenceEvent;

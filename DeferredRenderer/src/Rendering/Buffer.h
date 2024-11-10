@@ -58,7 +58,7 @@ struct VertexBuffer
 
 	inline const BufferLayout& GetLayout() const { return Layout; }
 	inline const D3D12_VERTEX_BUFFER_VIEW& GetView() const { return BufferView; }
-	inline const uint32_t& GetCountPerInstance() const { return CountPerInstance; }
+	inline uint32_t GetCountPerInstance() const { return CountPerInstance; }
 
 private:
 	void InitImpl(ID3D12Device5Ptr device, const std::vector<VertexElement>& vertices);
@@ -77,6 +77,7 @@ struct IndexBuffer
 	void Init(ID3D12Device5Ptr device, const std::vector<uint32_t>& indices);
 
     inline const D3D12_INDEX_BUFFER_VIEW& GetView() const { return BufferView; }
+	inline uint32_t GetIndexCount() const { return IndexCount; }
 
 private:
 	void InitImpl(ID3D12Device5Ptr device, const std::vector<uint32_t>& indices);
@@ -84,6 +85,7 @@ private:
 private:
     ID3D12ResourcePtr Buffer;
     D3D12_INDEX_BUFFER_VIEW BufferView;
+	uint32_t IndexCount;
 };
 
 template<typename T>

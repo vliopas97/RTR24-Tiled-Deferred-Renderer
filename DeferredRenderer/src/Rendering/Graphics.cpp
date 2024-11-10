@@ -8,6 +8,7 @@ Graphics::Graphics(Window& window)
 {
 	Init();
 
+	MainScene = MakeUnique<Scene>(Device);
 	RootSignature rootSignature(Device, D3D::InitializeGlobalRootSignature(Device));
 	PipelineBindings.Initialize(Device, rootSignature);
 
@@ -87,26 +88,13 @@ void Graphics::InitScene()
 	Shader<Vertex> vertexShader("Shader");
 	Shader<Pixel> pixelShader("Shader");
 
-	std::vector<VertexElement> triangleVertices =
-	{
-		{ { 0.0f, 1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
-		{ { 1.0f, -1.0f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
-		{ { -1.0f, -1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } }
-	};
-
-	std::vector<uint32_t> triangleIndices = { 0, 1, 2 };
-
-	auto size = sizeof(triangleVertices);
-
 	BufferLayout layout{ {"POSITION", DataType::float3},
 						{"COLOR", DataType::float4} };
-	VBuffer.Init(Device, triangleVertices, layout);
-	IBuffer.Init(Device, triangleIndices);
 
 
 	// Describe and create the graphics pipeline state object (PSO).
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
-	psoDesc.InputLayout = VBuffer.GetLayout();
+	psoDesc.InputLayout = layout;
 	psoDesc.pRootSignature = PipelineBindings.GetRootSignaturePtr();
 	psoDesc.VS = CD3DX12_SHADER_BYTECODE(vertexShader.GetBlob());
 	psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.GetBlob());
@@ -159,11 +147,7 @@ void Graphics::PopulateCommandList(UINT frameIndex)
 	CmdList->OMSetRenderTargets(1, &FrameObjects[frameIndex].RTVHandle, FALSE, nullptr);
 	CmdList->ClearRenderTargetView(FrameObjects[frameIndex].RTVHandle, clearColor, 0, nullptr);
 
-	CmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	CmdList->IASetVertexBuffers(0, 1, &VBuffer.GetView());
-	CmdList->IASetIndexBuffer(&IBuffer.GetView());
-	CmdList->DrawIndexedInstanced(VBuffer.GetCountPerInstance(), 1, 0, 0, 0);
-
+	MainScene->Bind(CmdList);
 
 	D3D::ResourceBarrier(CmdList,
 						 FrameObjects[frameIndex].SwapChainBuffer,
