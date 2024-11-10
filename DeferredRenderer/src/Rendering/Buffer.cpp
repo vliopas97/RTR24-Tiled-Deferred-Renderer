@@ -77,37 +77,57 @@ BufferLayout::operator D3D12_INPUT_LAYOUT_DESC() const
 	return { InputElementDesc.data(), (uint32_t)InputElementDesc.size() };
 }
 
-VertexBuffer::VertexBuffer(ID3D12Device5Ptr device, const std::vector<VertexElement>& vertices, const BufferLayout& layout)
-	:Layout(layout)
+void VertexBuffer::Init(ID3D12Device5Ptr device, const std::vector<VertexElement>& vertices, const BufferLayout& layout)
 {
-	Init(device, vertices);
+	assert(!Buffer && "Constant Buffer already initialized");
+	Layout = layout;
+	InitImpl(device, vertices);
 }
 
-VertexBuffer::VertexBuffer(ID3D12Device5Ptr device, const std::vector<VertexElement>& vertices, std::initializer_list<LayoutElement> layoutElements)
-	: Layout(layoutElements)
+void VertexBuffer::Init(ID3D12Device5Ptr device, const std::vector<VertexElement>& vertices, std::initializer_list<LayoutElement> layoutElements) 
 {
-	Init(device, vertices);
+	assert(!Buffer && "Constant Buffer already initialized");
+	Layout = { layoutElements };
+	InitImpl(device, vertices);
 }
 
-void VertexBuffer::Init(ID3D12Device5Ptr device, const std::vector<VertexElement>& vertices)
+void VertexBuffer::InitImpl(ID3D12Device5Ptr device, const std::vector<VertexElement>& vertices)
 {
-	const UINT vertexBufferSize = sizeof(VertexElement) * vertices.size();
+	CountPerInstance = vertices.size();
+	const UINT bufferSize = sizeof(VertexElement) * CountPerInstance;
 
-	GRAPHICS_ASSERT(device->CreateCommittedResource(
-		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-		D3D12_HEAP_FLAG_NONE,
-		&CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize),
-		D3D12_RESOURCE_STATE_GENERIC_READ,
-		nullptr,
-		IID_PPV_ARGS(&Buffer)));
+	Buffer = D3D::CreateBuffer(device, bufferSize, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_HEAP_TYPE_UPLOAD);
 
-	UINT8* pVertexDataBegin;
+	UINT8* pBufferDataBegin;
 	CD3DX12_RANGE readRange(0, 0);        // We do not intend to read from this resource on the CPU.
-	GRAPHICS_ASSERT(Buffer->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
-	std::memcpy(pVertexDataBegin, vertices.data(), vertexBufferSize);
+	GRAPHICS_ASSERT(Buffer->Map(0, &readRange, reinterpret_cast<void**>(&pBufferDataBegin)));
+	std::memcpy(pBufferDataBegin, vertices.data(), bufferSize);
 	Buffer->Unmap(0, nullptr);
 
 	BufferView.BufferLocation = Buffer->GetGPUVirtualAddress();
 	BufferView.StrideInBytes = sizeof(VertexElement);
-	BufferView.SizeInBytes = vertexBufferSize;
+	BufferView.SizeInBytes = bufferSize;
+}
+
+void IndexBuffer::Init(ID3D12Device5Ptr device, const std::vector<uint32_t>& indices)
+{
+	assert(!Buffer && "Constant Buffer already initialized");
+	InitImpl(device, indices);
+}
+
+void IndexBuffer::InitImpl(ID3D12Device5Ptr device, const std::vector<uint32_t>& indices)
+{
+	const UINT bufferSize = static_cast<UINT>(indices.size() * sizeof(uint32_t));
+
+	Buffer = D3D::CreateBuffer(device, bufferSize, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_HEAP_TYPE_UPLOAD);
+
+	uint32_t* pBufferDataBegin = nullptr;
+	CD3DX12_RANGE readRange(0, 0);  // We do not intend to read from this resource on the CPU.
+	Buffer->Map(0, &readRange, reinterpret_cast<void**>(&pBufferDataBegin));
+	std::memcpy(pBufferDataBegin, indices.data(), bufferSize);
+	Buffer->Unmap(0, nullptr);
+
+	BufferView.BufferLocation = Buffer->GetGPUVirtualAddress();
+	BufferView.SizeInBytes = bufferSize;
+	BufferView.Format = DXGI_FORMAT_R32_UINT;
 }

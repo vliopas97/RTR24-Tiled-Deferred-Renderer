@@ -62,8 +62,8 @@ namespace D3D
 	ID3D12ResourcePtr CreateBuffer(ID3D12Device5Ptr device,
 								   uint64_t size,
 								   D3D12_RESOURCE_FLAGS flags,
-								   D3D12_RESOURCE_STATES initState,
-								   const D3D12_HEAP_PROPERTIES& heapProperties);
+								   D3D12_RESOURCE_STATES initState, 
+								   const D3D12_HEAP_TYPE& heapType);
 
 	template<typename Container>
 	requires IsContainer<Container>

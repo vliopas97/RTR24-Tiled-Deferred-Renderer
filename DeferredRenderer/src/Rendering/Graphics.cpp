@@ -25,8 +25,9 @@ void Graphics::Tick(float delta)
 
 	// Update Pipeline Constants
 	SceneCamera.Tick(delta);
-	PipelineBindings.GlobalConstantsData.CameraPosition = SceneCamera.GetPosition();
-	PipelineBindings.GlobalConstantsData.ViewProjection = (SceneCamera.GetViewProjection());
+	PipelineBindings.CBGlobalConstants.CPUData.CameraPosition = SceneCamera.GetPosition();
+	PipelineBindings.CBGlobalConstants.CPUData.ViewProjection = SceneCamera.GetViewProjection();
+
 	PipelineBindings.Tick();
 
 	PopulateCommandList(frameIndex);
@@ -92,11 +93,16 @@ void Graphics::InitScene()
 		{ { 1.0f, -1.0f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
 		{ { -1.0f, -1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } }
 	};
+
+	std::vector<uint32_t> triangleIndices = { 0, 1, 2 };
+
 	auto size = sizeof(triangleVertices);
 
 	BufferLayout layout{ {"POSITION", DataType::float3},
 						{"COLOR", DataType::float4} };
-	VBuffer = VertexBuffer(Device, triangleVertices, layout);
+	VBuffer.Init(Device, triangleVertices, layout);
+	IBuffer.Init(Device, triangleIndices);
+
 
 	// Describe and create the graphics pipeline state object (PSO).
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
@@ -155,7 +161,8 @@ void Graphics::PopulateCommandList(UINT frameIndex)
 
 	CmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	CmdList->IASetVertexBuffers(0, 1, &VBuffer.GetView());
-	CmdList->DrawInstanced(3, 1, 0, 0);
+	CmdList->IASetIndexBuffer(&IBuffer.GetView());
+	CmdList->DrawIndexedInstanced(VBuffer.GetCountPerInstance(), 1, 0, 0, 0);
 
 
 	D3D::ResourceBarrier(CmdList,

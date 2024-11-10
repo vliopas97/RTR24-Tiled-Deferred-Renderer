@@ -1,5 +1,6 @@
 #pragma once
 #include "Core/Core.h"
+#include "Buffer.h"
 #include "Shaders/HLSLCompat.h"
 
 enum class ShaderType
@@ -115,10 +116,8 @@ public:
 	ID3D12DescriptorHeapPtr UAVHeap;
 	ID3D12DescriptorHeapPtr CBVHeap;//for temp objects
 
-	PipelineConstants GlobalConstantsData;
+	ConstantBuffer<PipelineConstants> CBGlobalConstants;
 
 private:
 	RootSignaturePtr RootSignatureData;
-	ID3D12ResourcePtr GlobalConstants;
-	uint8_t* GlobalConstantsDataBridgePtr;
 };

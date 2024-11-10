@@ -41,6 +41,7 @@ private:
     ID3D12PipelineStatePtr PipelineState;
     
     VertexBuffer VBuffer;
+    IndexBuffer IBuffer;
 
     ID3D12FencePtr Fence;
     HANDLE FenceEvent;
