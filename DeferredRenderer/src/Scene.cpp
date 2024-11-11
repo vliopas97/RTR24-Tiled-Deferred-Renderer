@@ -3,9 +3,9 @@
 Scene::Scene(ID3D12Device5Ptr device)
 	:Device(device)
 {
-	Actors.emplace_back( device);
+	Actors.emplace_back(Cube{ device });
 	Actors[0].SetPosition({ 2, 0, 0 });
-	Actors.emplace_back(device);
+	Actors.emplace_back(Cube{ device });
 	Actors[1].SetPosition({ 0, 0, 3 });
 }
 

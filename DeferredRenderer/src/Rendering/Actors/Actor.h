@@ -7,6 +7,7 @@ class Actor
 {
 public:
 	Actor(ID3D12Device5Ptr device);
+	virtual ~Actor() = default;
 
 	void Bind(ID3D12GraphicsCommandList4Ptr cmdList) const;
 	void Tick();
@@ -17,7 +18,7 @@ public:
 
 	void SetUpGPUResources(ID3D12Device5Ptr device, D3D12_CPU_DESCRIPTOR_HANDLE destDescriptor);
 
-private:
+protected:
 	VertexBuffer VBuffer;
 	IndexBuffer IBuffer;
 
@@ -28,3 +29,8 @@ private:
 	ConstantBuffer<ActorData> Model;
 };
 
+class Cube : public Actor
+{
+public:
+	Cube(ID3D12Device5Ptr device);
+};
