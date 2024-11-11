@@ -51,8 +51,12 @@ private:
     struct
     {
         ID3D12CommandAllocatorPtr CmdAllocator;
+        
         ID3D12ResourcePtr SwapChainBuffer;
+        ID3D12ResourcePtr DepthStencilBuffer;
+
         D3D12_CPU_DESCRIPTOR_HANDLE RTVHandle;
+        D3D12_CPU_DESCRIPTOR_HANDLE DSVHandle;
     } FrameObjects[DefaultSwapChainBuffers];
 
     struct HeapData
@@ -62,7 +66,9 @@ private:
     };
 
     HeapData RTVHeap;
+    HeapData DSVHeap;
     static const uint32_t RTVHeapSize = 3;
+    static const uint32_t DSVHeapSize = 3;
 
     Camera SceneCamera;
 };

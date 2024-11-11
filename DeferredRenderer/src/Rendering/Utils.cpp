@@ -55,6 +55,19 @@ D3D12_CPU_DESCRIPTOR_HANDLE D3D::CreateRTV(ID3D12Device5Ptr device, ID3D12Resour
 	return rtvHandle;
 }
 
+D3D12_CPU_DESCRIPTOR_HANDLE D3D::CreateDSV(ID3D12Device5Ptr device, ID3D12ResourcePtr resource, ID3D12DescriptorHeapPtr heap, uint32_t& usedHeapEntries, DXGI_FORMAT format)
+{
+	D3D12_DEPTH_STENCIL_VIEW_DESC desc{};
+	desc.Format = format;
+	desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+	desc.Flags = D3D12_DSV_FLAG_NONE;
+
+	auto dsvHandle = heap->GetCPUDescriptorHandleForHeapStart();
+	dsvHandle.ptr += (usedHeapEntries++) * device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+	device->CreateDepthStencilView(resource, &desc, dsvHandle);
+	return dsvHandle;
+}
+
 void D3D::ResourceBarrier(ID3D12GraphicsCommandList4Ptr cmdList, ID3D12ResourcePtr resource, D3D12_RESOURCE_STATES prevState, D3D12_RESOURCE_STATES nextState)
 {
 	D3D12_RESOURCE_BARRIER barrier{};
@@ -96,7 +109,7 @@ ID3D12RootSignaturePtr D3D::InitializeGlobalRootSignature(ID3D12Device5Ptr devic
 {
 	std::array<D3D12_DESCRIPTOR_RANGE, 1> uavRanges = {};
 	std::array<D3D12_DESCRIPTOR_RANGE, NumGlobalSRVDescriptorRanges> srvRanges = {};
-	std::array<D3D12_DESCRIPTOR_RANGE, 1> cbvRanges = {};
+	std::array<D3D12_DESCRIPTOR_RANGE, NumGlobalCBVDescriptorRanges> cbvRanges = {};
 
 	uavRanges[0].BaseShaderRegister = 0;
 	uavRanges[0].NumDescriptors = 2;
@@ -116,12 +129,17 @@ ID3D12RootSignaturePtr D3D::InitializeGlobalRootSignature(ID3D12Device5Ptr devic
 			descElement.RegisterSpace = (i - userStart) + 100;
 	}
 
-	cbvRanges[0].BaseShaderRegister = 0;
-	cbvRanges[0].NumDescriptors = 1;
-	cbvRanges[0].RegisterSpace = 0;
-	cbvRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+	for (uint32_t i = 0; i < NumGlobalCBVDescriptorRanges; ++i)
+	{
+		auto& descElement = cbvRanges[i];
+		descElement.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+		descElement.NumDescriptors = UINT_MAX;
+		descElement.BaseShaderRegister = 0;
+		descElement.RegisterSpace = i;
+		descElement.OffsetInDescriptorsFromTableStart = 0;
+	}
 
-	std::array<D3D12_ROOT_PARAMETER, RootParamTypesSize - 2> rootParams;
+	std::array<D3D12_ROOT_PARAMETER, 4> rootParams;
 
 	rootParams[StandardDescriptors].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	rootParams[StandardDescriptors].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
@@ -137,6 +155,12 @@ ID3D12RootSignaturePtr D3D::InitializeGlobalRootSignature(ID3D12Device5Ptr devic
 	rootParams[CBuffer].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 	rootParams[CBuffer].DescriptorTable.NumDescriptorRanges = static_cast<UINT>(cbvRanges.size());
 	rootParams[CBuffer].DescriptorTable.pDescriptorRanges = cbvRanges.data();
+
+	rootParams[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+	rootParams[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+	rootParams[3].Descriptor.ShaderRegister = 0;
+	rootParams[3].Descriptor.RegisterSpace = 200;
+
 
 	D3D12_ROOT_SIGNATURE_DESC desc{};
 	desc.NumParameters = static_cast<UINT>(rootParams.size());

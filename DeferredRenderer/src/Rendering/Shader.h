@@ -114,7 +114,7 @@ private:
 public:
 	ID3D12DescriptorHeapPtr SRVHeap;
 	ID3D12DescriptorHeapPtr UAVHeap;
-	ID3D12DescriptorHeapPtr CBVHeap;//for temp objects
+	ID3D12DescriptorHeapPtr CBVHeap;
 
 	ConstantBuffer<PipelineConstants> CBGlobalConstants;
 

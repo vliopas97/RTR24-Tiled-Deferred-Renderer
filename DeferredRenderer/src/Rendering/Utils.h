@@ -46,6 +46,12 @@ namespace D3D
 										  uint32_t& usedHeapEntries,
 										  DXGI_FORMAT format);
 
+	D3D12_CPU_DESCRIPTOR_HANDLE CreateDSV(ID3D12Device5Ptr device,
+										  ID3D12ResourcePtr resource,
+										  ID3D12DescriptorHeapPtr heap,
+										  uint32_t& usedHeapEntries,
+										  DXGI_FORMAT format);
+
 	void ResourceBarrier(ID3D12GraphicsCommandList4Ptr cmdList,
 						 ID3D12ResourcePtr resource,
 						 D3D12_RESOURCE_STATES prevState,

@@ -26,5 +26,9 @@ struct PipelineConstants
 	ALIGNAS(16) mat4x4 ViewProjection;
 };
 
+struct ActorData
+{
+	mat4x4 Model;
+};
 
 #endif // HLSLCOMPAT_H

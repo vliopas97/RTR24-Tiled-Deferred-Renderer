@@ -103,6 +103,11 @@ struct ConstantBuffer
 		std::memcpy(CPUDataBridgePtr, &CPUData, sizeof(CPUData));
 	}
 
+	D3D12_GPU_VIRTUAL_ADDRESS GetGPUVirtualAddress() const
+	{
+		return Buffer->GetGPUVirtualAddress();
+	}
+
 private:
 	void InitImpl(ID3D12Device5Ptr device, D3D12_CPU_DESCRIPTOR_HANDLE destDescriptor)
 	{
