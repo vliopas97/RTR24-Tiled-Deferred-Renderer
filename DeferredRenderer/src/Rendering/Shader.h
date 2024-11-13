@@ -15,6 +15,7 @@ enum RootParamTypes : uint32_t
 	StandardDescriptors = 0,
 	UAVDescriptor,
 	CBuffer,
+	Sampler,
 	LightCBuffer,
 	AppSettings,
 	RootParamTypesSize
@@ -115,6 +116,7 @@ public:
 	ID3D12DescriptorHeapPtr SRVHeap;
 	ID3D12DescriptorHeapPtr UAVHeap;
 	ID3D12DescriptorHeapPtr CBVHeap;
+	ID3D12DescriptorHeapPtr SamplerHeap;
 
 	ConstantBuffer<PipelineConstants> CBGlobalConstants;
 

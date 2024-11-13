@@ -110,6 +110,7 @@ ID3D12RootSignaturePtr D3D::InitializeGlobalRootSignature(ID3D12Device5Ptr devic
 	std::array<D3D12_DESCRIPTOR_RANGE, 1> uavRanges = {};
 	std::array<D3D12_DESCRIPTOR_RANGE, NumGlobalSRVDescriptorRanges> srvRanges = {};
 	std::array<D3D12_DESCRIPTOR_RANGE, NumGlobalCBVDescriptorRanges> cbvRanges = {};
+	std::array<D3D12_DESCRIPTOR_RANGE, 1> samplerRanges = {};
 
 	uavRanges[0].BaseShaderRegister = 0;
 	uavRanges[0].NumDescriptors = 2;
@@ -139,7 +140,12 @@ ID3D12RootSignaturePtr D3D::InitializeGlobalRootSignature(ID3D12Device5Ptr devic
 		descElement.OffsetInDescriptorsFromTableStart = 0;
 	}
 
-	std::array<D3D12_ROOT_PARAMETER, 4> rootParams;
+	samplerRanges[0].BaseShaderRegister = 0;
+	samplerRanges[0].NumDescriptors = 1;
+	samplerRanges[0].RegisterSpace = 0;
+	samplerRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
+
+	std::array<D3D12_ROOT_PARAMETER, 5> rootParams;
 
 	rootParams[StandardDescriptors].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	rootParams[StandardDescriptors].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
@@ -156,10 +162,15 @@ ID3D12RootSignaturePtr D3D::InitializeGlobalRootSignature(ID3D12Device5Ptr devic
 	rootParams[CBuffer].DescriptorTable.NumDescriptorRanges = static_cast<UINT>(cbvRanges.size());
 	rootParams[CBuffer].DescriptorTable.pDescriptorRanges = cbvRanges.data();
 
-	rootParams[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-	rootParams[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-	rootParams[3].Descriptor.ShaderRegister = 0;
-	rootParams[3].Descriptor.RegisterSpace = 200;
+	rootParams[Sampler].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	rootParams[Sampler].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+	rootParams[Sampler].DescriptorTable.NumDescriptorRanges = static_cast<UINT>(samplerRanges.size());
+	rootParams[Sampler].DescriptorTable.pDescriptorRanges = samplerRanges.data();
+
+	rootParams[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+	rootParams[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+	rootParams[4].Descriptor.ShaderRegister = 0;
+	rootParams[4].Descriptor.RegisterSpace = 200;
 
 
 	D3D12_ROOT_SIGNATURE_DESC desc{};

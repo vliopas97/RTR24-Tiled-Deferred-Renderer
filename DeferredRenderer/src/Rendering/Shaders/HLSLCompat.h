@@ -29,6 +29,7 @@ struct PipelineConstants
 struct ActorData
 {
 	mat4x4 Model;
+	uint TextureID;
 };
 
 #endif // HLSLCOMPAT_H

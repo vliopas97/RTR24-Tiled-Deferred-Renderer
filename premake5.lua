@@ -9,7 +9,8 @@ workspace "DeferredRenderer"
         "Release"
     }
 
-    OutputDir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
+    OutputDir = "%{prj.name}-%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
+    OutputName ="%{prj.name}"
 
 project "DeferredRenderer"
     location "DeferredRenderer"
@@ -19,8 +20,8 @@ project "DeferredRenderer"
     staticruntime "off"
     floatingpoint "fast"
 
-    targetdir ("bin/" .. OutputDir .. "/%{prj.name}")
-    objdir ("bin-int/" .. OutputDir .. "/%{prj.name}")
+    targetdir ("bin/")
+    objdir ("bin-int/".. OutputDir)
 
     linkoptions { "/SUBSYSTEM:WINDOWS"}
 
@@ -29,7 +30,8 @@ project "DeferredRenderer"
         "%{prj.name}/src",
         "%{wks.location}/ThirdParty/dxc",
         "%{wks.location}/ThirdParty/glm",
-        "%{wks.location}/ThirdParty/core"
+        "%{wks.location}/ThirdParty/core",
+        "%{wks.location}/ThirdParty/DirectXTex/include"
     }
     
     libdirs
@@ -42,7 +44,9 @@ project "DeferredRenderer"
         "d3d12.lib",
         "DXGI.lib",
         "dxguid.lib",
-        "d3dcompiler.lib"
+        "d3dcompiler.lib",
+        "DirectXTex.lib",
+        "DirectXTK12.lib"
     }
 
     files
@@ -76,12 +80,19 @@ project "DeferredRenderer"
     filter "configurations:Debug"
         runtime "Debug"
         symbols "on"
+        libdirs {"%{wks.location}/ThirdParty/DirectXTex/bin/debug",
+                 "%{wks.location}/ThirdParty/core/bin/debug"}
+        targetname (OutputName.."_d")
+        
 
     filter "configurations:Release"
         runtime "Release"
         symbols "on"
         optimize "Full"
         flags {"LinkTimeOptimization"}
+        libdirs {"%{wks.location}/ThirdParty/DirectXTex/bin/release",
+                "%{wks.location}/ThirdParty/core/bin/release" }
+        targetname (OutputName)
 
         defines
         {

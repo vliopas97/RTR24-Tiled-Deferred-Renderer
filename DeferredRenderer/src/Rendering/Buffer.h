@@ -50,18 +50,52 @@ private:
 	uint32_t Stride = 0;
 };
 
+template<typename T>
+concept IsVertexElement = std::is_base_of_v<VertexElement, T>;
+
 struct VertexBuffer
 {
 	VertexBuffer() = default;
-	void Init(ID3D12Device5Ptr device, const std::vector<VertexElement>& vertices, const BufferLayout& layout);
-	void Init(ID3D12Device5Ptr device, const std::vector<VertexElement>& vertices, std::initializer_list<LayoutElement> layoutElements);
+
+	template<IsVertexElement Vertex>
+	void Init(ID3D12Device5Ptr device, const std::vector<Vertex>& vertices, const BufferLayout& layout)
+	{
+		assert(!Buffer && "Constant Buffer already initialized");
+		Layout = layout;
+		InitImpl(device, vertices);
+	}
+	
+	template<IsVertexElement Vertex>
+	void Init(ID3D12Device5Ptr device, const std::vector<Vertex>& vertices, std::initializer_list<LayoutElement> layoutElements)
+	{
+		assert(!Buffer && "Constant Buffer already initialized");
+		Layout = { layoutElements };
+		InitImpl(device, vertices);
+	}
 
 	inline const BufferLayout& GetLayout() const { return Layout; }
 	inline const D3D12_VERTEX_BUFFER_VIEW& GetView() const { return BufferView; }
 	inline uint32_t GetCountPerInstance() const { return CountPerInstance; }
 
 private:
-	void InitImpl(ID3D12Device5Ptr device, const std::vector<VertexElement>& vertices);
+	template<IsVertexElement Vertex>
+	void InitImpl(ID3D12Device5Ptr device, const std::vector<Vertex>& vertices)
+	{
+		CountPerInstance = vertices.size();
+		const UINT bufferSize = sizeof(Vertex) * CountPerInstance;
+
+		Buffer = D3D::CreateBuffer(device, bufferSize, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_HEAP_TYPE_UPLOAD);
+
+		UINT8* pBufferDataBegin;
+		CD3DX12_RANGE readRange(0, 0);        // We do not intend to read from this resource on the CPU.
+		GRAPHICS_ASSERT(Buffer->Map(0, &readRange, reinterpret_cast<void**>(&pBufferDataBegin)));
+		std::memcpy(pBufferDataBegin, vertices.data(), bufferSize);
+		Buffer->Unmap(0, nullptr);
+
+		BufferView.BufferLocation = Buffer->GetGPUVirtualAddress();
+		BufferView.StrideInBytes = sizeof(Vertex);
+		BufferView.SizeInBytes = bufferSize;
+	}
 
 private:
 	BufferLayout Layout;

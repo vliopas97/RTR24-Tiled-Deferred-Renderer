@@ -27,6 +27,8 @@ protected:
 	glm::vec3 Scale;
 
 	ConstantBuffer<ActorData> Model;
+
+	friend class Scene;
 };
 
 class Cube : public Actor
