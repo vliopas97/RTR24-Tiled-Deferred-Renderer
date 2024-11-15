@@ -14,6 +14,7 @@ workspace "DeferredRenderer"
 
     group "Dependencies"
     include "ThirdParty/ImGui"
+    include "ThirdParty/assimp"
     group ""
 
 project "DeferredRenderer"
@@ -36,7 +37,8 @@ project "DeferredRenderer"
         "%{wks.location}/ThirdParty/glm",
         "%{wks.location}/ThirdParty/core",
         "%{wks.location}/ThirdParty/DirectXTex/include",
-        "%{wks.location}/ThirdParty/ImGui"
+        "%{wks.location}/ThirdParty/ImGui",
+        "%{wks.location}/ThirdParty/assimp/include"
     }
     
     libdirs
@@ -52,7 +54,8 @@ project "DeferredRenderer"
         "d3dcompiler.lib",
         "DirectXTex.lib",
         "DirectXTK12.lib",
-        "ImGui"
+        "ImGui",
+        "assimp"
     }
 
     files
