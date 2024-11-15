@@ -26,7 +26,7 @@ protected:
 	glm::vec3 Rotation;  
 	glm::vec3 Scale;
 
-	ConstantBuffer<ActorData> Model;
+	ConstantBuffer<ActorData> ActorInfo;
 
 	friend class Scene;
 };
@@ -35,4 +35,10 @@ class Cube : public Actor
 {
 public:
 	Cube(ID3D12Device5Ptr device);
+};
+
+class Sphere : public Actor
+{
+public:
+	Sphere(ID3D12Device5Ptr device);
 };

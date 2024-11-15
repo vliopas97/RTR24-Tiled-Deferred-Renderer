@@ -17,8 +17,7 @@ enum RootParamTypes : uint32_t
 	CBuffer,
 	Sampler,
 	LightCBuffer,
-	AppSettings,
-	RootParamTypesSize
+	GlobalDescTablesNo
 };
 
 constexpr ShaderType Vertex = ShaderType::Vertex;
@@ -117,6 +116,7 @@ public:
 	ID3D12DescriptorHeapPtr UAVHeap;
 	ID3D12DescriptorHeapPtr CBVHeap;
 	ID3D12DescriptorHeapPtr SamplerHeap;
+	ID3D12DescriptorHeapPtr LightsHeap;
 
 	ConstantBuffer<PipelineConstants> CBGlobalConstants;
 

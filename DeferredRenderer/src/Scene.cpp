@@ -7,6 +7,8 @@ Scene::Scene(ID3D12Device5Ptr device)
 	Actors[0].SetPosition({ 2, 0, 0 });
 	Actors.emplace_back(Cube{ device });
 	Actors[1].SetPosition({ 0, 0, 3 });
+
+	Lights.emplace_back(DirectionalLight{});
 }
 
 void Scene::Bind(ID3D12GraphicsCommandList4Ptr cmdList)
@@ -19,6 +21,12 @@ void Scene::Tick()
 {
 	for (auto& actor : Actors)
 		actor.Tick();
+
+	for (auto& light : Lights)
+	{
+		light.Tick();
+		light.GUI();
+	}
 }
 
 void Scene::CreateShaderResources(ID3D12Device5Ptr device, ID3D12CommandQueuePtr cmdQueue, PipelineStateBindings& pipelineStateBindings)
@@ -26,12 +34,19 @@ void Scene::CreateShaderResources(ID3D12Device5Ptr device, ID3D12CommandQueuePtr
 	auto uavHandle = pipelineStateBindings.UAVHeap->GetCPUDescriptorHandleForHeapStart();
 	auto srvHandle = pipelineStateBindings.SRVHeap->GetCPUDescriptorHandleForHeapStart();
 	auto cbvHandle = pipelineStateBindings.CBVHeap->GetCPUDescriptorHandleForHeapStart();
+	auto lightsHandle = pipelineStateBindings.LightsHeap->GetCPUDescriptorHandleForHeapStart();
 
-	cbvHandle.ptr += Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	cbvHandle.ptr += Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV); // 1st element of desc table occupied
 	for (auto& actor : Actors)
 	{
 		actor.SetUpGPUResources(Device, cbvHandle);
 		cbvHandle.ptr += Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	}
+
+	for (auto& light : Lights)
+	{
+		light.SetUpGPUResources(device, lightsHandle);
+		lightsHandle.ptr += Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	}
 
 	InitializeTextures(device, cmdQueue, pipelineStateBindings);
@@ -59,5 +74,5 @@ void Scene::InitializeTextures(ID3D12Device5Ptr device, ID3D12CommandQueuePtr cm
 
 	// Set tex IDs for each object
 	for (auto& actor : Actors)
-		actor.Model.CPUData.TextureID = 0;
+		actor.ActorInfo.CPUData.TextureID = 0;
 }

@@ -122,8 +122,7 @@ void Graphics::InitScene()
 	Shader<Pixel> pixelShader("Shader");
 
 	BufferLayout layout{ {"POSITION", DataType::float3},
-						{"COLOR", DataType::float4},
-						{"TEXCOORDS", DataType::float2} };
+					{"NORMAL", DataType::float3} };
 
 
 	// Describe and create the graphics pipeline state object (PSO).

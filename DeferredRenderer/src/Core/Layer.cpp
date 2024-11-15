@@ -3,6 +3,8 @@
 #include "Layer.h"
 #include "Rendering/Utils.h"
 
+static bool showDemoWindow = false;
+
 void ImGui_ImplWin32_InitPlatformInterface();
 
 ImGuiLayer::ImGuiLayer()
@@ -63,7 +65,6 @@ void ImGuiLayer::End(ID3D12GraphicsCommandList4Ptr cmdList)
 	Application& app = Application::GetApp();
 	io.DisplaySize = ImVec2((float)app.GetWindow()->GetWidth(), (float)app.GetWindow()->GetHeight());
 
-	static bool showDemoWindow = true;
 	if (showDemoWindow)
 		ImGui::ShowDemoWindow(&showDemoWindow);
 

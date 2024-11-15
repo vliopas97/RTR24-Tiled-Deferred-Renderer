@@ -63,6 +63,71 @@ namespace Primitives
 						}
 			};
 		}
+
+		template<IsVertexElement Vertex>
+		static IndexedVertices<Vertex> CreateWNormals()
+		{
+			constexpr float side = 0.5f;
+			std::vector<glm::vec3> positions = {
+				glm::vec3(-side, -side, -side),
+				glm::vec3(side, -side, -side),
+				glm::vec3(-side, side, -side),
+				glm::vec3(side, side, -side),
+				glm::vec3(-side, -side, side),
+				glm::vec3(side, -side, side),
+				glm::vec3(-side, side, side),
+				glm::vec3(side, side, side),
+				glm::vec3(-side, -side, -side),
+				glm::vec3(-side, side, -side),
+				glm::vec3(-side, -side, side),
+				glm::vec3(-side, side, side),
+				glm::vec3(side, -side, -side),
+				glm::vec3(side, side, -side),
+				glm::vec3(side, -side, side),
+				glm::vec3(side, side, side),
+				glm::vec3(-side, -side, -side),
+				glm::vec3(side, -side, -side),
+				glm::vec3(-side, -side, side),
+				glm::vec3(side, -side, side),
+				glm::vec3(-side, side, -side),
+				glm::vec3(side, side, -side),
+				glm::vec3(-side, side, side),
+				glm::vec3(side, side, side)
+			};
+
+			std::vector<Vertex> vertices(positions.size());
+			for (size_t i = 0; i < positions.size(); i++)
+				vertices[i].Position = positions[i];
+
+			std::vector<uint32_t> indices = {
+				0, 2, 1, 2, 3, 1,
+				4, 5, 7, 4, 7, 6,
+				8, 10, 9, 10, 11, 9,
+				12, 13, 15, 12, 15, 14,
+				16, 17, 18, 18, 17, 19,
+				20, 23, 21, 20, 22, 23
+			};
+
+			for (size_t i = 0; i < indices.size(); i += 3)
+			{
+				auto& v0 = vertices[indices[i]];
+				auto& v1 = vertices[indices[i + 1]];
+				auto& v2 = vertices[indices[i + 2]];
+
+				const glm::vec3& p0 = v0.Position;
+				const glm::vec3& p1 = v1.Position;
+				const glm::vec3& p2 = v2.Position;
+
+				glm::vec3 n = glm::normalize(glm::cross(p1 - p0, p2 - p0));
+				n *= -1.0f;  // Flip the normal if necessary
+
+				v0.Normal = n;
+				v1.Normal = n;
+				v2.Normal = n;
+			}
+
+			return { std::move(vertices), std::move(indices) };
+		}
 	};
 
 	class Sphere

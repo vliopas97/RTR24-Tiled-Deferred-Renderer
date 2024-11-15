@@ -6,7 +6,6 @@
 struct VertexElement
 {
 	glm::float3 Position;
-	glm::float4 Color;
 };
 
 enum class DataType

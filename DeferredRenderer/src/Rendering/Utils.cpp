@@ -111,6 +111,7 @@ ID3D12RootSignaturePtr D3D::InitializeGlobalRootSignature(ID3D12Device5Ptr devic
 	std::array<D3D12_DESCRIPTOR_RANGE, NumGlobalSRVDescriptorRanges> srvRanges = {};
 	std::array<D3D12_DESCRIPTOR_RANGE, NumGlobalCBVDescriptorRanges> cbvRanges = {};
 	std::array<D3D12_DESCRIPTOR_RANGE, 1> samplerRanges = {};
+	std::array<D3D12_DESCRIPTOR_RANGE, 1> lightRanges = {};
 
 	uavRanges[0].BaseShaderRegister = 0;
 	uavRanges[0].NumDescriptors = 2;
@@ -145,7 +146,12 @@ ID3D12RootSignaturePtr D3D::InitializeGlobalRootSignature(ID3D12Device5Ptr devic
 	samplerRanges[0].RegisterSpace = 0;
 	samplerRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
 
-	std::array<D3D12_ROOT_PARAMETER, 5> rootParams;
+	lightRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+	lightRanges[0].NumDescriptors = 1;
+	lightRanges[0].BaseShaderRegister = 0;
+	lightRanges[0].RegisterSpace = 100;
+
+	std::array<D3D12_ROOT_PARAMETER, 6> rootParams;
 
 	rootParams[StandardDescriptors].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 	rootParams[StandardDescriptors].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
@@ -167,10 +173,15 @@ ID3D12RootSignaturePtr D3D::InitializeGlobalRootSignature(ID3D12Device5Ptr devic
 	rootParams[Sampler].DescriptorTable.NumDescriptorRanges = static_cast<UINT>(samplerRanges.size());
 	rootParams[Sampler].DescriptorTable.pDescriptorRanges = samplerRanges.data();
 
-	rootParams[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-	rootParams[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-	rootParams[4].Descriptor.ShaderRegister = 0;
-	rootParams[4].Descriptor.RegisterSpace = 200;
+	rootParams[LightCBuffer].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	rootParams[LightCBuffer].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+	rootParams[LightCBuffer].DescriptorTable.NumDescriptorRanges = static_cast<UINT>(lightRanges.size());
+	rootParams[LightCBuffer].DescriptorTable.pDescriptorRanges = lightRanges.data();
+
+	rootParams[LightCBuffer + 1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+	rootParams[LightCBuffer + 1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+	rootParams[LightCBuffer + 1].Descriptor.ShaderRegister = 0;
+	rootParams[LightCBuffer + 1].Descriptor.RegisterSpace = 200;
 
 
 	D3D12_ROOT_SIGNATURE_DESC desc{};

@@ -89,7 +89,6 @@ project "DeferredRenderer"
         libdirs {"%{wks.location}/ThirdParty/DirectXTex/bin/debug",
                  "%{wks.location}/ThirdParty/core/bin/debug"}
         targetname (OutputName.."_d")
-        
 
     filter "configurations:Release"
         runtime "Release"

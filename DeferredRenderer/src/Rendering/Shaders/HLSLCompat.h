@@ -32,4 +32,11 @@ struct ActorData
 	uint TextureID;
 };
 
+struct DirLightData
+{
+	mat4x4 Model;
+	ALIGNAS(16) vec3 Position;
+	ALIGNAS(16) vec3 Direction;
+};
+
 #endif // HLSLCOMPAT_H

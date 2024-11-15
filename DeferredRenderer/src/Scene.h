@@ -1,6 +1,7 @@
 #pragma once
 #include "Core/Core.h"
 #include "Rendering/Actors/Actor.h"
+#include "Rendering/Actors/Lights.h"
 #include "Rendering/Shader.h"
 #include "Rendering/Texture.h"
 
@@ -19,6 +20,7 @@ private:
 
 private:
 	std::vector<Actor> Actors;
+	std::vector<DirectionalLight> Lights;
 	ID3D12Device5Ptr Device;
 
 	UniquePtr<Texture> tex;
