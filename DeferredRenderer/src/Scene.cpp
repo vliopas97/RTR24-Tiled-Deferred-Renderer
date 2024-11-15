@@ -1,11 +1,12 @@
 #include "Scene.h"
+#include "Camera.h"
 
-Scene::Scene(ID3D12Device5Ptr device)
+Scene::Scene(ID3D12Device5Ptr device, const Camera& camera)
 	:Device(device)
 {
-	Actors.emplace_back(Cube{ device });
+	Actors.emplace_back(Cube{ device, camera });
 	Actors[0].SetPosition({ 2, 0, 0 });
-	Actors.emplace_back(Cube{ device });
+	Actors.emplace_back(Cube{ device, camera });
 	Actors[1].SetPosition({ 0, 0, 3 });
 
 	Lights.emplace_back(DirectionalLight{});

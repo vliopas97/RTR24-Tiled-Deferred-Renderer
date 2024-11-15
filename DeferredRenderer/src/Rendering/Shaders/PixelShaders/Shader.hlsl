@@ -13,5 +13,5 @@ SamplerState smplr : register(s0);
 
 float4 main(float3 posWorld : POSITION, float3 n : Normal) : SV_TARGET
 {    
-    return float4(calcSunlight(n), 1.0f);
+    return float4(calcSunlight(posWorld, n), 1.00f);
 }

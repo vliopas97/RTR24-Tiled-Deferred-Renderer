@@ -6,7 +6,7 @@
 class Actor
 {
 public:
-	Actor(ID3D12Device5Ptr device);
+	Actor(ID3D12Device5Ptr device, const class Camera& camera);
 	virtual ~Actor() = default;
 
 	void Bind(ID3D12GraphicsCommandList4Ptr cmdList) const;
@@ -19,6 +19,7 @@ public:
 	void SetUpGPUResources(ID3D12Device5Ptr device, D3D12_CPU_DESCRIPTOR_HANDLE destDescriptor);
 
 protected:
+	const Camera& SceneCamera;
 	VertexBuffer VBuffer;
 	IndexBuffer IBuffer;
 
@@ -34,11 +35,11 @@ protected:
 class Cube : public Actor
 {
 public:
-	Cube(ID3D12Device5Ptr device);
+	Cube(ID3D12Device5Ptr device, const Camera& camera);
 };
 
 class Sphere : public Actor
 {
 public:
-	Sphere(ID3D12Device5Ptr device);
+	Sphere(ID3D12Device5Ptr device, const Camera& camera);
 };

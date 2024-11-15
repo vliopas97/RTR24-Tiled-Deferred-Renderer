@@ -89,6 +89,7 @@ project "DeferredRenderer"
         libdirs {"%{wks.location}/ThirdParty/DirectXTex/bin/debug",
                  "%{wks.location}/ThirdParty/core/bin/debug"}
         targetname (OutputName.."_d")
+        shaderoptions ("/Zi")
 
     filter "configurations:Release"
         runtime "Release"

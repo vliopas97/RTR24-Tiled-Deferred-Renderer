@@ -9,7 +9,7 @@
 class Scene
 {
 public:
-	Scene(ID3D12Device5Ptr device);
+	Scene(ID3D12Device5Ptr device, const class Camera& camera);
 	void Bind(ID3D12GraphicsCommandList4Ptr cmdList);
 	void Tick();
 

@@ -23,20 +23,32 @@ using namespace glm;
 struct PipelineConstants
 {
 	vec3 CameraPosition;
-	ALIGNAS(16) mat4x4 ViewProjection;
+	ALIGNAS(16) mat4x4 View;
+	mat4x4 ViewProjection;
+};
+
+struct ALIGNAS(16) MaterialData
+{
+	float3 MatericalColor;
+	float SpecularIntensity;
+	float Shininess;
 };
 
 struct ActorData
 {
 	mat4x4 Model;
-	uint TextureID;
+	mat4x4 ModelView;
+	ALIGNAS(16) uint TextureID;
+	ALIGNAS(16) MaterialData Material;
 };
 
 struct DirLightData
 {
-	mat4x4 Model;
-	ALIGNAS(16) vec3 Position;
+	vec3 Position;
 	ALIGNAS(16) vec3 Direction;
+	ALIGNAS(16) vec3 Ambient;
+	ALIGNAS(16) vec3 DiffuseColor;
+	float DiffuseIntensity;
 };
 
 #endif // HLSLCOMPAT_H

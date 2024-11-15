@@ -34,6 +34,7 @@ void Graphics::Tick(float delta)
 	// Update Pipeline Constants
 	SceneCamera.Tick(delta);
 	PipelineBindings.CBGlobalConstants.CPUData.CameraPosition = SceneCamera.GetPosition();
+	PipelineBindings.CBGlobalConstants.CPUData.View = SceneCamera.GetView();
 	PipelineBindings.CBGlobalConstants.CPUData.ViewProjection = SceneCamera.GetViewProjection();
 
 	PipelineBindings.Tick();
@@ -116,7 +117,7 @@ void Graphics::Init()
 
 void Graphics::InitScene()
 {
-	MainScene = MakeUnique<Scene>(Device);
+	MainScene = MakeUnique<Scene>(Device, SceneCamera);
 
 	Shader<Vertex> vertexShader("Shader");
 	Shader<Pixel> pixelShader("Shader");

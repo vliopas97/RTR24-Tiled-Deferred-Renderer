@@ -1,12 +1,17 @@
 #include "Actor.h"
 #include "Primitives.h"
 #include "Rendering/Shader.h"
+#include "Camera.h"
 
-Actor::Actor(ID3D12Device5Ptr device)
-    : Position(0.0f, 0.0f, 0.0f),
+Actor::Actor(ID3D12Device5Ptr device, const Camera& camera)
+    : SceneCamera(camera),
+    Position(0.0f, 0.0f, 0.0f),
     Rotation(0.0f, 0.0f, 0.0f),
     Scale(1.0f, 1.0f, 1.0f)
 {
+    ActorInfo.CPUData.Material.MatericalColor = glm::vec3(1.0f, 1.0f, 1.0f);
+    ActorInfo.CPUData.Material.SpecularIntensity = 1.0f;
+    ActorInfo.CPUData.Material.Shininess = 12.0f;
 }
 
 void Actor::Bind(ID3D12GraphicsCommandList4Ptr cmdList) const
@@ -21,6 +26,7 @@ void Actor::Bind(ID3D12GraphicsCommandList4Ptr cmdList) const
 void Actor::Tick()
 {
     ActorInfo.CPUData.Model = glm::translate(Position) * glm::mat4_cast(glm::quat(Rotation)) * glm::scale(Scale);
+    ActorInfo.CPUData.ModelView = SceneCamera.GetView() * ActorInfo.CPUData.Model;
     ActorInfo.Tick();
 }
 
@@ -29,8 +35,8 @@ void Actor::SetUpGPUResources(ID3D12Device5Ptr device, D3D12_CPU_DESCRIPTOR_HAND
     ActorInfo.Init(device, destDescriptor);
 }
 
-Cube::Cube(ID3D12Device5Ptr device)
-    :Actor(device)
+Cube::Cube(ID3D12Device5Ptr device, const Camera& camera)
+    :Actor(device, camera)
 {
     struct VertexElementNorm : VertexElement
     {
@@ -48,8 +54,8 @@ Cube::Cube(ID3D12Device5Ptr device)
     IBuffer.Init(device, data.Indices);
 }
 
-Sphere::Sphere(ID3D12Device5Ptr device)
-    :Actor(device)
+Sphere::Sphere(ID3D12Device5Ptr device, const Camera& camera)
+    :Actor(device, camera)
 {
     Scale = glm::vec3(0.1f, 0.1f, 0.1f);
     
