@@ -1,7 +1,11 @@
 #include "Window.h"
 
+#include "backends/imgui_impl_win32.h"
+
 #include <cassert>
 #include <cstdlib>
+
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 #define GEN_KEYBOARD_EVENT(Event)		{Event event(static_cast<uint8>(wParam));\
 										EventCallback(event);}\
@@ -166,6 +170,11 @@ LRESULT CALLBACK Window::WindProc(HWND windowHandle, UINT message, WPARAM wParam
 
 LRESULT Window::WindProcImpl(HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam)
 {
+	if (ImGui_ImplWin32_WndProcHandler(windowHandle, message, wParam, lParam))
+	{
+		return true;
+	}
+
 	PAINTSTRUCT pStruct;
 	switch (message)
 	{

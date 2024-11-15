@@ -3,7 +3,9 @@
 *.d
 
 # Ignore bin folders
+bin/
 bin-int/
+
 
 # Ignore VS files and folders
 .vs/

@@ -12,6 +12,10 @@ workspace "DeferredRenderer"
     OutputDir = "%{prj.name}-%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
     OutputName ="%{prj.name}"
 
+    group "Dependencies"
+    include "ThirdParty/ImGui"
+    group ""
+
 project "DeferredRenderer"
     location "DeferredRenderer"
     kind "WindowedApp"
@@ -31,7 +35,8 @@ project "DeferredRenderer"
         "%{wks.location}/ThirdParty/dxc",
         "%{wks.location}/ThirdParty/glm",
         "%{wks.location}/ThirdParty/core",
-        "%{wks.location}/ThirdParty/DirectXTex/include"
+        "%{wks.location}/ThirdParty/DirectXTex/include",
+        "%{wks.location}/ThirdParty/ImGui"
     }
     
     libdirs
@@ -46,7 +51,8 @@ project "DeferredRenderer"
         "dxguid.lib",
         "d3dcompiler.lib",
         "DirectXTex.lib",
-        "DirectXTK12.lib"
+        "DirectXTK12.lib",
+        "ImGui"
     }
 
     files

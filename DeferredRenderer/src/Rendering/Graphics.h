@@ -8,12 +8,20 @@
 #include "Actors/Actor.h"
 #include "Scene.h"
 
+class ImGuiLayer;
+
 struct Graphics
 {
 	Graphics(Window& window);
 	~Graphics();
 
 	void Tick(float delta);
+
+    ID3D12Device5Ptr GetDevice() { return Device; }
+    ID3D12CommandAllocatorPtr GetCommandAllocator() { return FrameObjects[SwapChain->GetCurrentBackBufferIndex()].CmdAllocator; }
+    ID3D12CommandQueuePtr GetCommandQueue() { return CmdQueue; }
+    ID3D12GraphicsCommandList4Ptr GetCommandList() { return CmdList; }
+    const UniquePtr<ImGuiLayer>& GetImGui() { return ImGui; }
 
 private:
 	void Init();
@@ -25,6 +33,9 @@ private:
 	void CreateSwapChain();
 
     void CreateShaderResources();
+
+    void ResetCommandList();
+    void EndFrame(UINT frameIndex);
 
 private:
     HWND WinHandle{ nullptr };
@@ -71,5 +82,8 @@ private:
     static const uint32_t DSVHeapSize = 3;
 
     Camera SceneCamera;
+
+    UniquePtr<ImGuiLayer> ImGui;
+
 };
 

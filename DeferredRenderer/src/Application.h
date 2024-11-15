@@ -29,6 +29,7 @@ public:
 
 private:
 	Application(int width, int height, HINSTANCE instance, const char* title);
+	~Application();
 	Application(const Application&) = delete;
 	Application& operator=(const Application&) = delete;
 

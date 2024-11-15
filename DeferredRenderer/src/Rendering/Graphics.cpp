@@ -1,16 +1,21 @@
 #include "Graphics.h"
 #include "Core/Exception.h"
 #include "Utils.h"
+#include "Core/Layer.h"
+
 #include "Shader.h"
 
 Graphics::Graphics(Window& window)
-	:WinHandle(window.Handle), SwapChainSize(window.Width, window.Height), SceneCamera()
+	:WinHandle(window.GetHandle()), SwapChainSize(window.GetWidth(), window.GetHeight()), 
+	SceneCamera(), ImGui(MakeUnique<ImGuiLayer>())
 {
 	Init();
 
 	RootSignature rootSignature(Device, D3D::InitializeGlobalRootSignature(Device));
 	PipelineBindings.Initialize(Device, rootSignature);
 
+	ImGui->OnAttach(Device);
+	
 	InitScene();
 }
 
@@ -21,7 +26,10 @@ Graphics::~Graphics()
 
 void Graphics::Tick(float delta)
 {
+	ResetCommandList();
 	uint32_t frameIndex = SwapChain->GetCurrentBackBufferIndex();
+
+	ImGui->Begin();
 
 	// Update Pipeline Constants
 	SceneCamera.Tick(delta);
@@ -32,14 +40,9 @@ void Graphics::Tick(float delta)
 	MainScene->Tick();
 
 	PopulateCommandList(frameIndex);
-	SwapChain->Present(1, 0);
+	ImGui->End(CmdList);
 
-	if (FenceValue > DefaultSwapChainBuffers)
-	{
-		Fence->SetEventOnCompletion(FenceValue - DefaultSwapChainBuffers + 1, FenceEvent);
-		WaitForSingleObject(FenceEvent, INFINITE);
-	}
-
+	EndFrame(frameIndex);
 }
 
 void Graphics::Init()
@@ -154,12 +157,12 @@ void Graphics::Shutdown()
 	CmdQueue->Signal(Fence, ++FenceValue);
 	Fence->SetEventOnCompletion(FenceValue, FenceEvent);
 	WaitForSingleObject(FenceEvent, INFINITE);
+
+	ImGui.reset();
 }
 
 void Graphics::PopulateCommandList(UINT frameIndex)
 {
-	FrameObjects[frameIndex].CmdAllocator->Reset();
-	CmdList->Reset(FrameObjects[frameIndex].CmdAllocator, PipelineState.GetInterfacePtr());
 	D3D::ResourceBarrier(CmdList,
 						 FrameObjects[frameIndex].SwapChainBuffer,
 						 D3D12_RESOURCE_STATE_PRESENT,
@@ -180,13 +183,6 @@ void Graphics::PopulateCommandList(UINT frameIndex)
 	CmdList->ClearDepthStencilView(FrameObjects[frameIndex].DSVHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0.0f, 0, nullptr);
 
 	MainScene->Bind(CmdList);
-
-	D3D::ResourceBarrier(CmdList,
-						 FrameObjects[frameIndex].SwapChainBuffer,
-						 D3D12_RESOURCE_STATE_RENDER_TARGET,
-						 D3D12_RESOURCE_STATE_PRESENT);
-
-	FenceValue = D3D::SubmitCommandList(CmdList, CmdQueue, Fence, FenceValue);
 }
 
 void Graphics::CreateDevice()
@@ -226,4 +222,28 @@ void Graphics::CreateSwapChain()
 void Graphics::CreateShaderResources()
 {
 	MainScene->CreateShaderResources(Device, CmdQueue, PipelineBindings);
+}
+
+void Graphics::ResetCommandList()
+{
+	GetCommandAllocator()->Reset();
+	CmdList->Reset(GetCommandAllocator(), PipelineState);
+}
+
+inline void Graphics::EndFrame(UINT frameIndex)
+{
+	D3D::ResourceBarrier(CmdList,
+						 FrameObjects[frameIndex].SwapChainBuffer,
+						 D3D12_RESOURCE_STATE_RENDER_TARGET,
+						 D3D12_RESOURCE_STATE_PRESENT);
+
+	FenceValue = D3D::SubmitCommandList(CmdList, CmdQueue, Fence, FenceValue);
+
+	SwapChain->Present(1, 0);
+
+	if (FenceValue > DefaultSwapChainBuffers)
+	{
+		Fence->SetEventOnCompletion(FenceValue - DefaultSwapChainBuffers + 1, FenceEvent);
+		WaitForSingleObject(FenceEvent, INFINITE);
+	}
 }

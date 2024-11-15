@@ -34,6 +34,10 @@
 #include <string>
 #include <vector>
 
+#include <imgui.h>
+#include <backends\imgui_impl_dx12.h>
+#include <backends\imgui_impl_win32.h>
+
 static constexpr const uint32_t DefaultSwapChainBuffers = 3;
 static constexpr const float aspectRatio = 16.0f / 9.0f;
 

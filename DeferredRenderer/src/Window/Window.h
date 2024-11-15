@@ -13,6 +13,10 @@ struct Window
 
 	static std::optional<int> ProcessMessages();
 
+	inline uint32_t GetWidth() const { return Width; }
+	inline uint32_t GetHeight() const { return Height; }
+	inline HWND GetHandle() { return Handle; }
+
 	void OnEvent(Event& event);
 	void SetEventCallbackFunction(const EventCallbackFn& fn);
 
@@ -33,11 +37,12 @@ private:
 	void FreeCursor();
 
 public:
-	HWND Handle;
-	int Width, Height;
 	InputManager Input;
 
 private:
+	HWND Handle;
+	uint32_t Width, Height;
+
 	EventCallbackFn EventCallback;
 	bool CursorVisibility = false;
 

@@ -1,6 +1,8 @@
 #include "Application.h"
+#include "Core/Layer.h"
 
 #include <cassert>
+
 
 Application* Application::Instance = nullptr;
 
@@ -51,6 +53,7 @@ void Application::Shutdown()
 void Application::OnEvent(Event& e)
 {
 	MainWindow->OnEvent(e);
+	GraphicsInterface->GetImGui()->OnEvent(e);
 }
 
 void Application::Tick()
@@ -88,4 +91,8 @@ Application::Application(int width, int height, HINSTANCE instance, const char* 
 											 OnEvent(e);
 										 });
 	GraphicsInterface = std::make_unique<Graphics>(*MainWindow);
+}
+
+Application::~Application()
+{
 }
