@@ -1,5 +1,6 @@
 #include "Scene.h"
 #include "Camera.h"
+#include "Rendering/Actors/Model.h"
 
 Scene::Scene(ID3D12Device5Ptr device, const Camera& camera)
 	:Device(device)
@@ -8,6 +9,8 @@ Scene::Scene(ID3D12Device5Ptr device, const Camera& camera)
 	Actors[0].SetPosition({ 2, 0, 0 });
 	Actors.emplace_back(Cube{ device, camera });
 	Actors[1].SetPosition({ 0, 0, 3 });
+	Actors.emplace_back(Model{ device, camera });
+	Actors[2].SetScale({ 0.1f, 0.1f, 0.1f });
 
 	Lights.emplace_back(DirectionalLight{});
 }

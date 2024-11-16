@@ -25,7 +25,7 @@ void Actor::Bind(ID3D12GraphicsCommandList4Ptr cmdList) const
 
 void Actor::Tick()
 {
-    ActorInfo.CPUData.Model = glm::translate(Position) * glm::mat4_cast(glm::quat(Rotation)) * glm::scale(Scale);
+    ActorInfo.CPUData.Model = glm::translate(Position) * glm::mat4_cast(glm::quat(glm::radians(Rotation))) * glm::scale(Scale);
     ActorInfo.CPUData.ModelView = SceneCamera.GetView() * ActorInfo.CPUData.Model;
     ActorInfo.Tick();
 }
@@ -43,8 +43,6 @@ Cube::Cube(ID3D12Device5Ptr device, const Camera& camera)
         glm::float3 Normal;
     };
 
-    VertexElementNorm v;
-    
     auto data = Primitives::Cube::CreateWNormals<VertexElementNorm>();
 
     BufferLayout layout{ {"POSITION", DataType::float3},
