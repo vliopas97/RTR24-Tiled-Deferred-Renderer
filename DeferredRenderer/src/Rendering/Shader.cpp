@@ -58,7 +58,7 @@ void PipelineStateBindings::Setup(ID3D12Device5Ptr device)
 	SRVHeap = D3D::CreateDescriptorHeap(device, NumGlobalSRVDescriptorRanges + 1,
 										D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
 	UAVHeap = D3D::CreateDescriptorHeap(device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
-	CBVHeap = D3D::CreateDescriptorHeap(device, NumGlobalCBVDescriptorRanges, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
+	CBVHeap = D3D::CreateDescriptorHeap(device, 400, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
 	SamplerHeap = D3D::CreateDescriptorHeap(device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, true);
 	LightsHeap = D3D::CreateDescriptorHeap(device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
 

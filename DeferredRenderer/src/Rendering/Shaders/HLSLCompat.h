@@ -38,7 +38,9 @@ struct ActorData
 {
 	mat4x4 Model;
 	mat4x4 ModelView;
-	ALIGNAS(16) uint TextureID;
+	ALIGNAS(16) int KdID;
+	int KnID;
+	int KsID;
 	ALIGNAS(16) MaterialData Material;
 };
 

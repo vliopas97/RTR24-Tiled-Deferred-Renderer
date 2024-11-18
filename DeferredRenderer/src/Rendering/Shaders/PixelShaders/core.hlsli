@@ -2,8 +2,6 @@
 
 static DirLightData Sun = glLights[0];
 
-static const float3 materialColor = { 0.7f, 0.7f, 0.9f };
-
 static const float3 ambient = { 0.15f, 0.15f, 0.15f };
 static const float3 diffuseColor = { 1.0f, 1.0f, 1.0f };
 static const float diffuseIntensity = 1.0f;
@@ -26,5 +24,5 @@ float3 calcSunlight(in float3 posWorld, in float3 normal)
     specular = dot(lightDir, normal) != 0.0 ? specular : 0.0;
     specular = pow(specular, actorData.Material.Shininess);
     
-    return saturate((diffuse + float3(specular, specular, specular) + Sun.Ambient) * materialColor);
+    return saturate((diffuse + float3(specular, specular, specular) + Sun.Ambient) * actorData.Material.MatericalColor);
 }

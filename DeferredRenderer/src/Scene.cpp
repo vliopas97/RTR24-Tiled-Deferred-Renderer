@@ -1,17 +1,18 @@
 #include "Scene.h"
 #include "Camera.h"
 #include "Rendering/Actors/Model.h"
+#include <filesystem>
+#include <unordered_map>
 
 Scene::Scene(ID3D12Device5Ptr device, const Camera& camera)
-	:Device(device)
+	:Device(device), DebugMode(true)
 {
-	Actors.emplace_back(Cube{ device, camera });
-	Actors[0].SetPosition({ 2, 0, 0 });
-	Actors.emplace_back(Cube{ device, camera });
-	Actors[1].SetPosition({ 0, 0, 3 });
-	Actors.emplace_back(Model{ device, camera });
-	Actors[2].SetScale({ 0.1f, 0.1f, 0.1f });
-
+	//Actors.emplace_back(Cube{ device, camera });
+	//Actors[0].SetPosition({ 2, 0, 0 });
+	//Actors.emplace_back(Cube{ device, camera });
+	//Actors[1].SetPosition({ 0, 0, 3 });
+	InitializeTextureIndices();// Texture indices before Loading the Models - IMPORTANT
+	LoadModels(camera);
 	Lights.emplace_back(DirectionalLight{});
 }
 
@@ -74,9 +75,80 @@ void Scene::InitializeTextures(ID3D12Device5Ptr device, ID3D12CommandQueuePtr cm
 {
 	// Create Texture
 	auto srvHandle = pipelineStateBindings.SRVHeap->GetCPUDescriptorHandleForHeapStart();
-	tex = MakeUnique<Texture>(device, cmdQueue, srvHandle, "Img\\sample.jpg");
 
-	// Set tex IDs for each object
-	for (auto& actor : Actors)
-		actor.ActorInfo.CPUData.TextureID = 0;
+	std::filesystem::path solutionPath = std::filesystem::current_path().parent_path();
+	auto filepath = solutionPath.string() + (DebugMode ? "\\Content\\Model\\Nanosuit\\" : "\\Content\\Model\\Sponza\\");
+
+	for (const auto& pair : TextureIndexMap)
+	{
+		TextureResources.emplace_back(MakeUnique<Texture>(device, cmdQueue, srvHandle, filepath + pair.first));
+		srvHandle.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	}
+}
+
+void Scene::LoadModels(const Camera& camera)
+{
+	auto findTextureIndex = [this](aiString& filename)
+		{
+			auto it = TextureIndexMap.find(filename.C_Str());
+			filename.Clear();
+			return it != TextureIndexMap.end() ? it->second : -1; // Return -1 if not found
+		};
+
+	Assimp::Importer importer;
+	auto objFilename = DebugMode ? "\\Content\\Model\\Nanosuit\\nanosuit.obj" : "\\Content\\Model\\Sponza\\sponza.obj";
+	float scalingFactor = DebugMode ? 0.15f : 0.05f;
+
+	std::filesystem::path solutionPath = std::filesystem::current_path().parent_path();
+	auto scene = importer.ReadFile(solutionPath.string() + objFilename,
+								   aiProcess_Triangulate | aiProcess_ConvertToLeftHanded | aiProcess_FixInfacingNormals);
+
+	assert(scene->HasMaterials() && "expected that loaded scene has materials");
+	auto* materials = scene->mMaterials;
+
+	for (size_t i = 0; i < scene->mNumMeshes; i++)
+	{
+		const auto mesh = scene->mMeshes[i];
+		Actors.emplace_back(Model{ Device, camera, *mesh });
+		auto& actor = Actors.back();
+		actor.SetScale({ scalingFactor, scalingFactor, scalingFactor });
+
+		bool hasMaterial = mesh->mMaterialIndex >= 0;
+		if (!hasMaterial)
+			return;
+
+		aiString filename;
+		auto& material = materials[mesh->mMaterialIndex];
+		
+		material->GetTexture(aiTextureType_DIFFUSE, 0, &filename);
+		actor.ActorInfo.CPUData.KdID = findTextureIndex(filename);
+		material->GetTexture(aiTextureType_NORMALS, 0, &filename);
+		actor.ActorInfo.CPUData.KnID = findTextureIndex(filename);
+		material->GetTexture(aiTextureType_SPECULAR, 0, &filename);
+		actor.ActorInfo.CPUData.KsID = findTextureIndex(filename);
+	}
+}
+
+void Scene::InitializeTextureIndices()
+{
+	auto filename = std::string(DebugMode ? "\\Content\\Model\\Nanosuit\\texturesList.txt" : "\\Content\\Model\\Sponza\\texturesList.txt");
+	std::filesystem::path solutionPath = std::filesystem::current_path().parent_path();
+	filename = solutionPath.string() + filename;
+
+		std::ifstream file(filename);
+	if (file.is_open())
+	{
+		std::string line;
+		int line_number = 0;
+
+		while (std::getline(file, line))
+		{
+			TextureIndexMap[line] = line_number; // 0-based indexing
+			line_number++;
+		}
+
+		file.close();
+	}
+	else assert(false && "could not open file");
+	
 }

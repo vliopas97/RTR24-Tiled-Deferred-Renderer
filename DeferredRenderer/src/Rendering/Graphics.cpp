@@ -32,6 +32,10 @@ void Graphics::Tick(float delta)
 	ImGui->Begin();
 
 	// Update Pipeline Constants
+	CmdQueue->Signal(Fence, ++FenceValue);
+	Fence->SetEventOnCompletion(FenceValue, FenceEvent);
+	WaitForSingleObject(FenceEvent, INFINITE);
+
 	SceneCamera.Tick(delta);
 	PipelineBindings.CBGlobalConstants.CPUData.CameraPosition = SceneCamera.GetPosition();
 	PipelineBindings.CBGlobalConstants.CPUData.View = SceneCamera.GetView();
