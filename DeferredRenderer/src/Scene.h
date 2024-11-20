@@ -25,7 +25,7 @@ private:
 	std::vector<DirectionalLight> Lights;
 	ID3D12Device5Ptr Device;
 
-	std::unordered_map<std::string, uint32_t> TextureIndexMap;
+	std::vector<std::pair<std::string, uint32_t>> TextureIndexMap;
 	std::vector<UniquePtr<Texture>> TextureResources;
 	bool DebugMode;
 };
