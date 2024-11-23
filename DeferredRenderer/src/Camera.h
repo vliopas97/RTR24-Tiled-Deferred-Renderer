@@ -36,5 +36,5 @@ private:
 	glm::vec3 Position = { 0.0f, 0.0f, 0.0f };
 	glm::vec3 Rotation = { 0.0f, 0.0f, 0.0f };
 
-	float TranslationSpeed = 10.0f, RotationSpeed = 0.05f;
+	float TranslationSpeed = 20.0f, RotationSpeed = 0.05f;
 };

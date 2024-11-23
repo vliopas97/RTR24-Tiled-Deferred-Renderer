@@ -7,10 +7,6 @@
 Scene::Scene(ID3D12Device5Ptr device, const Camera& camera)
 	:Device(device), DebugMode(false)
 {
-	//Actors.emplace_back(Cube{ device, camera });
-	//Actors[0].SetPosition({ 2, 0, 0 });
-	//Actors.emplace_back(Cube{ device, camera });
-	//Actors[1].SetPosition({ 0, 0, 3 });
 	InitializeTextureIndices();// Texture indices before Loading the Models - IMPORTANT
 	LoadModels(camera);
 	Lights.emplace_back(DirectionalLight{});

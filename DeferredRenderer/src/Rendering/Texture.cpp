@@ -13,7 +13,6 @@ using namespace DirectX;
 
 Texture::Texture(ID3D12Device5Ptr device, ID3D12CommandQueuePtr CmdQueue, D3D12_CPU_DESCRIPTOR_HANDLE destDescriptor, const std::string& filename)
 {
-	//auto filepath = std::filesystem::current_path().parent_path().string() + "\\Content\\" + filename;
 	wchar_t wideName[512];
 	mbstowcs_s(nullptr, wideName, filename.c_str(), _TRUNCATE);
 	DirectX::LoadFromWICFile(wideName, DirectX::WIC_FLAGS_NONE, nullptr, Image);

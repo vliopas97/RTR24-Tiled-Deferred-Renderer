@@ -1,7 +1,7 @@
 #include "Lights.h"
 
 DirectionalLight::DirectionalLight()
-	:Position(10.0f, 50.0f, 10.0f)
+	:Position(0.0f, 50.0f, 0.0f)
 {
 	Info.CPUData.Ambient = glm::vec3(0.15, 0.15f, 0.15f);
 	Info.CPUData.DiffuseColor = glm::vec3(1.0f, 1.0f, 1.0f);

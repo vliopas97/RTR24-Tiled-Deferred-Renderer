@@ -4,28 +4,25 @@ SamplerState smplr : register(s0);
 
 static DirLightData Sun = glLights[0];
 
-static const float3 ambient = { 0.15f, 0.15f, 0.15f };
-static const float3 diffuseColor = { 1.0f, 1.0f, 1.0f };
-static const float diffuseIntensity = 1.0f;
 static const float attConst = 1.0f;
 static const float attLin = 0.05f;
 static const float attQuad = 0.01f;
 
-float3 normalPreprocess(float3 n, float3 t, float3 b, float2 texCoords)
+float3 normalPreprocess(float3 n, float3x3 TBN, float2 texCoords)
 {
     int ID = actorData.KnID;    
     
     if (ID < 0)
-        return normalize(n); // if no normal map available
+        return normalize(-1.0f * n); // if no normal map available
     
-    float3x3 TBN = float3x3(normalize(t), normalize(b), normalize(n));
     Texture2D<float4> normalMap = getTexture(ID);
     const float3 normalSample = normalMap.Sample(smplr, texCoords).xyz;
-    n.x = normalSample.x * 2.0f - 1.0f;
-    n.y = normalSample.y * 2.0f - 1.0f;
-    n.z = normalSample.z * 2.0f - 1.0f;
-    n = -1.0f * mul(transpose(TBN), n);
-    return n;
+    
+    n = 2.0f * normalSample.xyz - 1.0f;
+    n.xz = -n.xz;
+    n = mul(TBN, n);
+    
+    return normalize(n);
 }
 
 float3 calcSpecular(in float3 posView, in float3 lightDir, in float3 normal)

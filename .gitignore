@@ -16,12 +16,14 @@ bin-int/
 **.csproj
 **.pdb
 **.exe
+!premake5.exe
 
 # Compiled Object files
 **.slo
 **.lo
 **.o
 **.obj
+!Content/**/*.obj
 
 # Compiled shaders
 **.cso

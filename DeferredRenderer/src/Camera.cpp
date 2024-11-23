@@ -20,12 +20,12 @@ static T wrap_angle(T theta) noexcept
 }
 
 Camera::Camera()
-	:FovY(2.0f), AspectRatio(16.0f / 9.0f), NearZ(0.4f), FarZ(400.0f),
+	:FovY(2.0f), AspectRatio(16.0f / 9.0f), NearZ(0.2f), FarZ(400.0f),
 	Projection(glm::perspectiveLH_NO(glm::degrees(FovY), AspectRatio, NearZ, FarZ)), 
 	View(glm::mat4x4(1.0f)), RotationMatrix(1.0f)
 {
 	ViewProjection = Projection * View;
-	Position = { 0.0f, 0.0f, -4.0f };// initializing camera position - might change it later
+	Position = { 0.0f, 8.0f, -4.0f };// initializing camera position - might change it later
 }
 
 
