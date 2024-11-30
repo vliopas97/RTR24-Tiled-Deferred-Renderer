@@ -3,14 +3,14 @@
 #include <iomanip>
 #include <dxgidebug.h>
 
-ExceptionBase::ExceptionBase(uint32_t line, const char* file) noexcept
-	: Line(line), File(file)
+ExceptionBase::ExceptionBase(uint32_t line, const char* file, const std::string& customMessage) noexcept
+	: Line(line), File(file), CustomMessage(customMessage)
 {}
 
 const char* ExceptionBase::what() const noexcept
 {
 	std::ostringstream oss;
-	oss << GetType() << " | " << GetRawMessage();
+	oss << GetType() << " | " << GetRawMessage() << std::endl << CustomMessage;
 	ErrorMessage = oss.str();
 	return ErrorMessage.c_str();
 }

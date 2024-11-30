@@ -1,9 +1,6 @@
 #include "Application.h"
 #include "Core/Layer.h"
 
-#include <cassert>
-
-
 Application* Application::Instance = nullptr;
 
 Timer::Timer()
@@ -25,7 +22,7 @@ float Timer::GetAndReset()
 
 Application& Application::GetApp()
 {
-	assert(Instance && "App instance not initialized");
+	ASSERT(Instance, "App instance not initialized");
 	return *Instance;
 }
 
@@ -44,16 +41,25 @@ void Application::Init(int width, int height, HINSTANCE instance, const char* ti
 	Instance = new Application(width, height, instance, title);
 }
 
+void Application::InitGraphics()
+{
+	ASSERT(!Instance->GraphicsInterface, "Graphics interface already initialized");
+	Instance->GraphicsInterface = MakeUnique<Graphics>(*Instance->MainWindow);
+}
+
 void Application::Shutdown()
 {
-	assert(Instance && "App instance already deleted");
+	ASSERT(Instance, "App instance already deleted");
 	delete Instance;
 }
 
 void Application::OnEvent(Event& e)
 {
-	MainWindow->OnEvent(e);
-	GraphicsInterface->GetImGui()->OnEvent(e);
+	if (MainWindow && GraphicsInterface)
+	{
+		MainWindow->OnEvent(e);
+		GraphicsInterface->GetImGui()->OnEvent(e);
+	}
 }
 
 void Application::Tick()
@@ -82,7 +88,7 @@ void Application::Tick()
 Application::Application(int width, int height, HINSTANCE instance, const char* title)
 	:MainWindow(MakeUnique<Window>(width, height, instance, title))
 {
-	assert(!Instance && "App instance already initialized");
+	ASSERT(!Instance, "App instance already initialized");
 	Instance = this;
 	auto cursor = LoadCursor(nullptr, IDC_ARROW);
 
@@ -90,7 +96,6 @@ Application::Application(int width, int height, HINSTANCE instance, const char* 
 										 {
 											 OnEvent(e);
 										 });
-	GraphicsInterface = std::make_unique<Graphics>(*MainWindow);
 }
 
 Application::~Application()

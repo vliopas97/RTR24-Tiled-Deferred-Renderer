@@ -2,7 +2,7 @@
 
 #include "backends/imgui_impl_win32.h"
 
-#include <cassert>
+#include "Core/Exception.h"
 #include <cstdlib>
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -73,7 +73,7 @@ Window::Window(int width, int height, HINSTANCE& instance, const char* title)
 	wcex.hIconSm = nullptr;
 
 	if (!RegisterClassEx(&wcex))
-		assert(true && "Failed to register window");
+		(true && "Failed to register window");
 
 	RECT desktop;
 	const HWND desktopHandle = GetDesktopWindow();
@@ -86,20 +86,19 @@ Window::Window(int width, int height, HINSTANCE& instance, const char* title)
 	Handle = CreateWindow(wcex.lpszClassName, wTitle, WS_OVERLAPPEDWINDOW, x, 200, (rc.right - rc.left),
 						  (rc.bottom - rc.top), NULL, NULL, instance, this);
 
-	if (!Handle) assert(true && "Failed to create window");
-	else
-	{
-		ShowWindow(Handle, SW_SHOWDEFAULT);
-		UpdateWindow(Handle);
-	}
+	ASSERT(Handle, "Failed to create window");
+	
+	ShowWindow(Handle, SW_SHOWDEFAULT);
+	UpdateWindow(Handle);
 
 	RAWINPUTDEVICE rawInput{};
 	rawInput.usUsagePage = 0x01;
 	rawInput.usUsage = 0x02;
 	rawInput.dwFlags = 0;
 	rawInput.hwndTarget = nullptr;
-	if (RegisterRawInputDevices(&rawInput, 1, sizeof(RAWINPUTDEVICE)) == FALSE)
-		assert(false && "Failed to register raw input devices");
+
+	ASSERT(RegisterRawInputDevices(&rawInput, 1, sizeof(RAWINPUTDEVICE)) != FALSE,
+		   "Failed to register raw input devices");
 }
 
 std::optional<int> Window::ProcessMessages()
@@ -161,11 +160,11 @@ LRESULT Window::InitializeWindow(HWND windowHandle, UINT message, WPARAM wParam,
 	}
 	return DefWindowProc(windowHandle, message, wParam, lParam);
 }
-
+#include "Core/Exception.h"
 LRESULT CALLBACK Window::WindProc(HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	Window* const windowPtr = reinterpret_cast<Window*>(GetWindowLongPtr(windowHandle, GWLP_USERDATA));
-	return windowPtr->WindProcImpl(windowHandle, message, wParam, lParam);
+	EXCEPTION_WRAP(return windowPtr->WindProcImpl(windowHandle, message, wParam, lParam););
 }
 
 LRESULT Window::WindProcImpl(HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam)

@@ -22,6 +22,7 @@ public:
 	static Application& GetApp();
 	int Run();
 	static void Init(int width, int height, HINSTANCE instance, const char* title);
+	static void InitGraphics();
 	static void Shutdown();
 
 	const UniquePtr<Window>& GetWindow() { return MainWindow; }

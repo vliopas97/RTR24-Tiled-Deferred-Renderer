@@ -8,7 +8,7 @@
 class ExceptionBase : public std::exception
 {
 public:
-	ExceptionBase(uint32_t line, const char* file) noexcept;
+	ExceptionBase(uint32_t line, const char* file, const std::string& customMessage = "") noexcept;
 	virtual ~ExceptionBase() = default;
 	const char* what() const noexcept override;
 	virtual const char* GetType() const noexcept;
@@ -23,12 +23,13 @@ protected:
 private:
 	uint32_t Line;
 	std::string File;
+	std::string CustomMessage;
 
 protected:
 	mutable std::string ErrorMessage;
 };
 
-#define EXCEPTION ExceptionBase(__LINE__, __FILE__)
+#define EXCEPTION(x) ExceptionBase(__LINE__, __FILE__, x)
 
 #define EXCEPTION_WRAP(x)\
 	try\
@@ -134,8 +135,10 @@ private:
 }
 
 
-#ifndef NDEBUG
-#define GRAPHICS_EXCEPTION(hr) throw GraphicsException( __LINE__,__FILE__,(hr),InfoManager.GetMessages() )
+//#ifndef NDEBUG
+#define ASSERT(condition, msg)\
+if(!condition) throw EXCEPTION(msg);
+
 #define GRAPHICS_ASSERT(hrcall)\
 {	DXGIInfoManager InfoManager;\
 	InfoManager.Reset();\
@@ -143,12 +146,13 @@ private:
     if (FAILED(hr)) \
         throw GraphicsException(__LINE__, __FILE__, hr, InfoManager.GetMessages()); \
 }
+
 #define GRAPHICS_DEVICE_REMOVED_EXCEPTION(hr) DeviceRemovedException( __LINE__,__FILE__,(hr),InfoManager.GetMessages() )
 #define GRAPHICS_INFO_ONLY(call) {DXGIInfoManager InfoManager; InfoManager.Reset(); (call); {auto v = InfoManager.GetMessages(); if(!v.empty()) {throw GraphicsExceptionInfo( __LINE__,__FILE__,InfoManager.GetMessages());}}}
-
-#else
-#define GRAPHICS_EXCEPTION(hr) GraphicsException( __LINE__,__FILE__,(hr))
-#define GRAPHICS_ASSERT(hrcall) GRAPHICS_ASSERT_NOINFO(hrcall)
-#define GRAPHICS_DEVICE_REMOVED_EXCEPTION(hr) DeviceRemovedException( __LINE__,__FILE__,(hr))
-#define GRAPHICS_INFO_ONLY(call) call;
-#endif
+//
+//#else
+//#define GRAPHICS_EXCEPTION(hr) GraphicsException( __LINE__,__FILE__,(hr))
+//#define GRAPHICS_ASSERT(hrcall) GRAPHICS_ASSERT_NOINFO(hrcall)
+//#define GRAPHICS_DEVICE_REMOVED_EXCEPTION(hr) DeviceRemovedException( __LINE__,__FILE__,(hr))
+//#define GRAPHICS_INFO_ONLY(call) call;
+//#endif

@@ -59,7 +59,7 @@ struct VertexBuffer
 	template<IsVertexElement Vertex>
 	void Init(ID3D12Device5Ptr device, const std::vector<Vertex>& vertices, const BufferLayout& layout)
 	{
-		assert(!Buffer && "Constant Buffer already initialized");
+		ASSERT(!Buffer, "Constant Buffer already initialized");
 		Layout = layout;
 		InitImpl(device, vertices);
 	}
@@ -67,7 +67,7 @@ struct VertexBuffer
 	template<IsVertexElement Vertex>
 	void Init(ID3D12Device5Ptr device, const std::vector<Vertex>& vertices, std::initializer_list<LayoutElement> layoutElements)
 	{
-		assert(!Buffer && "Constant Buffer already initialized");
+		ASSERT(!Buffer, "Constant Buffer already initialized");
 		Layout = { layoutElements };
 		InitImpl(device, vertices);
 	}
@@ -127,7 +127,7 @@ struct ConstantBuffer
 	ConstantBuffer() = default;
 	void Init(ID3D12Device5Ptr device, D3D12_CPU_DESCRIPTOR_HANDLE destDescriptor)
 	{
-		assert(!Buffer && "Constant Buffer already initialized");
+		ASSERT(!Buffer, "Constant Buffer already initialized");
 		InitImpl(device, destDescriptor);
 	}
 

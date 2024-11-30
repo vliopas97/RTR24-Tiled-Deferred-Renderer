@@ -3,10 +3,14 @@
 #include "Rendering/Actors/Model.h"
 #include <filesystem>
 #include <unordered_map>
+#include <iostream>
 
 Scene::Scene(ID3D12Device5Ptr device, const Camera& camera)
 	:Device(device), DebugMode(false)
 {
+	FilesLocation = std::filesystem::current_path().parent_path().string()
+		+ std::string(DebugMode ? "\\Content\\Model\\Nanosuit\\" : "\\Content\\Model\\Sponza\\");
+
 	InitializeTextureIndices();// Texture indices before Loading the Models - IMPORTANT
 	LoadModels(camera);
 	Lights.emplace_back(DirectionalLight{});
@@ -74,12 +78,9 @@ void Scene::InitializeTextures(ID3D12Device5Ptr device, ID3D12CommandQueuePtr cm
 	// Create Texture
 	auto srvHandle = pipelineStateBindings.SRVHeap->GetCPUDescriptorHandleForHeapStart();
 
-	std::filesystem::path solutionPath = std::filesystem::current_path().parent_path();
-	auto filepath = solutionPath.string() + (DebugMode ? "\\Content\\Model\\Nanosuit\\" : "\\Content\\Model\\Sponza\\");
-
 	for (const auto& pair : TextureIndexMap)
 	{
-		TextureResources.emplace_back(MakeUnique<Texture>(device, cmdQueue, srvHandle, filepath + pair.first));
+		TextureResources.emplace_back(MakeUnique<Texture>(device, cmdQueue, srvHandle, FilesLocation + pair.first));
 		srvHandle.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	}
 }
@@ -87,11 +88,11 @@ void Scene::InitializeTextures(ID3D12Device5Ptr device, ID3D12CommandQueuePtr cm
 void Scene::LoadModels(const Camera& camera)
 {
 	Assimp::Importer importer;
-	auto objFilename = DebugMode ? "\\Content\\Model\\Nanosuit\\nanosuit.obj" : "\\Content\\Model\\Sponza\\sponza.obj";
+	auto objFilename = FilesLocation + (DebugMode ? "nanosuit.obj" : "sponza.obj");
 	float scalingFactor = DebugMode ? 0.15f : 0.05f;
 
 	std::filesystem::path solutionPath = std::filesystem::current_path().parent_path();
-	auto scene = importer.ReadFile(solutionPath.string() + objFilename,
+	auto scene = importer.ReadFile(objFilename,
 								   aiProcess_Triangulate 
 								   | aiProcess_ConvertToLeftHanded 
 								   | aiProcess_FixInfacingNormals
@@ -99,7 +100,9 @@ void Scene::LoadModels(const Camera& camera)
 								   | aiProcess_GenNormals |
 								   aiProcess_CalcTangentSpace);
 
-	assert(scene->HasMaterials() && "expected that loaded scene has materials");
+	ASSERT(scene, "Scene importer returns NULL. Scene not found in location " + objFilename + " .Check directory or file name");
+	
+	ASSERT(scene->HasMaterials(), "Expected that loaded scene has materials");
 	auto* materials = scene->mMaterials;
 
 	for (size_t i = 0; i < scene->mNumMeshes; i++)
@@ -113,9 +116,7 @@ void Scene::LoadModels(const Camera& camera)
 
 void Scene::InitializeTextureIndices()
 {
-	auto filename = std::string(DebugMode ? "\\Content\\Model\\Nanosuit\\texturesList.txt" : "\\Content\\Model\\Sponza\\texturesList.txt");
-	std::filesystem::path solutionPath = std::filesystem::current_path().parent_path();
-	filename = solutionPath.string() + filename;
+	auto filename = FilesLocation + "texturesList.txt";
 
 		std::ifstream file(filename);
 	if (file.is_open())
@@ -131,5 +132,7 @@ void Scene::InitializeTextureIndices()
 
 		file.close();
 	}
-	else assert(false && "could not open file");
+	else ASSERT(false, 
+				"Could not open file for initializing the texture indices for dynamic indexing.\n Not found in location: " 
+				+ FilesLocation + " Check directory or file name.");
 }

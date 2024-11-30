@@ -27,6 +27,8 @@ private:
 
 	std::vector<std::pair<std::string, uint32_t>> TextureIndexMap;
 	std::vector<UniquePtr<Texture>> TextureResources;
+	
 	bool DebugMode;
+	std::string FilesLocation;
 };
 
