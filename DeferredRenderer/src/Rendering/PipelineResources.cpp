@@ -1,7 +1,6 @@
-#include "Shader.h"
+#include "PipelineResources.h"
 #include "Utils.h"
 #include "Core/Exception.h"
-
 
 RootSignature::RootSignature(ID3D12Device5Ptr device)
 {

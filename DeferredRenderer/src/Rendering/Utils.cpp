@@ -1,6 +1,7 @@
 #include "Utils.h"
 #include "Core/Exception.h"
 #include "Shader.h"
+#include "PipelineResources.h"
 
 #include <codecvt>
 
@@ -93,13 +94,8 @@ ID3D12RootSignaturePtr D3D::CreateRootSignature(ID3D12Device5Ptr pDevice,
 {
 	ID3DBlobPtr sigBlob;
 	ID3DBlobPtr errorBlob;
-	HRESULT hr = D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &sigBlob, &errorBlob);
-	if (FAILED(hr))
-	{
-		std::string msg = convertBlobToString(errorBlob.GetInterfacePtr());
-		MessageBoxA(NULL, msg.c_str(), "Error", MB_OK);
-		return nullptr;
-	}
+	GRAPHICS_ASSERT_W_MSG(D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &sigBlob, &errorBlob),
+						  convertBlobToString(errorBlob.GetInterfacePtr()));
 	ID3D12RootSignaturePtr rootSig;
 	GRAPHICS_ASSERT(pDevice->CreateRootSignature(0, sigBlob->GetBufferPointer(), sigBlob->GetBufferSize(), IID_PPV_ARGS(&rootSig)));
 	return rootSig;
@@ -107,49 +103,30 @@ ID3D12RootSignaturePtr D3D::CreateRootSignature(ID3D12Device5Ptr pDevice,
 
 ID3D12RootSignaturePtr D3D::InitializeGlobalRootSignature(ID3D12Device5Ptr device)
 {
-	std::array<D3D12_DESCRIPTOR_RANGE, 1> uavRanges = {};
-	std::array<D3D12_DESCRIPTOR_RANGE, NumGlobalSRVDescriptorRanges> srvRanges = {};
-	std::array<D3D12_DESCRIPTOR_RANGE, NumGlobalCBVDescriptorRanges> cbvRanges = {};
-	std::array<D3D12_DESCRIPTOR_RANGE, 1> samplerRanges = {};
-	std::array<D3D12_DESCRIPTOR_RANGE, 1> lightRanges = {};
+	std::vector<D3D12_DESCRIPTOR_RANGE> srvRanges;
+	std::vector<D3D12_DESCRIPTOR_RANGE> cbvRanges;
 
-	uavRanges[0].BaseShaderRegister = 0;
-	uavRanges[0].NumDescriptors = 2;
-	uavRanges[0].RegisterSpace = 0;
-	uavRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+	std::vector<D3D12_DESCRIPTOR_RANGE> uavRanges = {
+		DescriptorRangeBuilder::CreateRange(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 2, 0)
+	};
 
 	uint32_t userStart = NumGlobalSRVDescriptorRanges - NumUserDescriptorRanges;
 	for (uint32_t i = 0; i < NumGlobalSRVDescriptorRanges; ++i)
 	{
-		auto& descElement = srvRanges[i];
-		descElement.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-		descElement.NumDescriptors = UINT_MAX;
-		descElement.BaseShaderRegister = 0;
-		descElement.RegisterSpace = i;
-		descElement.OffsetInDescriptorsFromTableStart = 0;
-		if (i >= userStart)
-			descElement.RegisterSpace = (i - userStart) + 100;
+		UINT registerSpace = (i >= userStart) ? (i - userStart) + 100 : i;
+		srvRanges.emplace_back(DescriptorRangeBuilder::CreateRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, UINT_MAX, 0, registerSpace));
 	}
 
 	for (uint32_t i = 0; i < NumGlobalCBVDescriptorRanges; ++i)
-	{
-		auto& descElement = cbvRanges[i];
-		descElement.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
-		descElement.NumDescriptors = UINT_MAX;
-		descElement.BaseShaderRegister = 0;
-		descElement.RegisterSpace = i;
-		descElement.OffsetInDescriptorsFromTableStart = 0;
-	}
+		cbvRanges.emplace_back(DescriptorRangeBuilder::CreateRange(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, UINT_MAX, 0, i));
 
-	samplerRanges[0].BaseShaderRegister = 0;
-	samplerRanges[0].NumDescriptors = 1;
-	samplerRanges[0].RegisterSpace = 0;
-	samplerRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
+	std::vector<D3D12_DESCRIPTOR_RANGE> samplerRanges = {
+	DescriptorRangeBuilder::CreateRange(D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, 1, 0)
+	};
 
-	lightRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
-	lightRanges[0].NumDescriptors = 1;
-	lightRanges[0].BaseShaderRegister = 0;
-	lightRanges[0].RegisterSpace = 100;
+	std::vector<D3D12_DESCRIPTOR_RANGE> lightRanges = {
+	DescriptorRangeBuilder::CreateRange(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 100)
+	};
 
 	std::array<D3D12_ROOT_PARAMETER, 6> rootParams;
 

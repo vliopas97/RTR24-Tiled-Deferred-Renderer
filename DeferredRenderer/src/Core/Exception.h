@@ -147,6 +147,13 @@ if(!condition) throw EXCEPTION(msg);
         throw GraphicsException(__LINE__, __FILE__, hr, InfoManager.GetMessages()); \
 }
 
+#define GRAPHICS_ASSERT_W_MSG(hrcall, msg)\
+{\
+	HRESULT hr = (hrcall);\
+	if (FAILED(hr)) \
+			throw GraphicsException(__LINE__, __FILE__, hr, std::vector<std::string>{msg}); \
+}
+
 #define GRAPHICS_DEVICE_REMOVED_EXCEPTION(hr) DeviceRemovedException( __LINE__,__FILE__,(hr),InfoManager.GetMessages() )
 #define GRAPHICS_INFO_ONLY(call) {DXGIInfoManager InfoManager; InfoManager.Reset(); (call); {auto v = InfoManager.GetMessages(); if(!v.empty()) {throw GraphicsExceptionInfo( __LINE__,__FILE__,InfoManager.GetMessages());}}}
 //
