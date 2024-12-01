@@ -34,12 +34,12 @@ void Scene::Tick()
 	}
 }
 
-void Scene::CreateShaderResources(ID3D12Device5Ptr device, ID3D12CommandQueuePtr cmdQueue, PipelineStateBindings& pipelineStateBindings)
+void Scene::CreateShaderResources(ID3D12Device5Ptr device, ID3D12CommandQueuePtr cmdQueue)
 {
-	auto uavHandle = pipelineStateBindings.UAVHeap->GetCPUDescriptorHandleForHeapStart();
-	auto srvHandle = pipelineStateBindings.SRVHeap->GetCPUDescriptorHandleForHeapStart();
-	auto cbvHandle = pipelineStateBindings.CBVHeap->GetCPUDescriptorHandleForHeapStart();
-	auto lightsHandle = pipelineStateBindings.LightsHeap->GetCPUDescriptorHandleForHeapStart();
+	auto uavHandle = UAVHeap->GetCPUDescriptorHandleForHeapStart();
+	auto srvHandle = SRVHeap->GetCPUDescriptorHandleForHeapStart();
+	auto cbvHandle = CBVHeap->GetCPUDescriptorHandleForHeapStart();
+	auto lightsHandle = LightsHeap->GetCPUDescriptorHandleForHeapStart();
 
 	cbvHandle.ptr += Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV); // 1st element of desc table occupied
 	for (auto& actor : Actors)
@@ -54,7 +54,7 @@ void Scene::CreateShaderResources(ID3D12Device5Ptr device, ID3D12CommandQueuePtr
 		lightsHandle.ptr += Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	}
 
-	InitializeTextures(device, cmdQueue, pipelineStateBindings);
+	InitializeTextures(device, cmdQueue);
 
 	D3D12_SAMPLER_DESC samplerDesc = {};
 	samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR; // Linear filtering
@@ -68,15 +68,15 @@ void Scene::CreateShaderResources(ID3D12Device5Ptr device, ID3D12CommandQueuePtr
 	samplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
 
 	// Get the handle to the sampler heap
-	CD3DX12_CPU_DESCRIPTOR_HANDLE samplerHandle(pipelineStateBindings.SamplerHeap->GetCPUDescriptorHandleForHeapStart());
+	CD3DX12_CPU_DESCRIPTOR_HANDLE samplerHandle(SamplerHeap->GetCPUDescriptorHandleForHeapStart());
 	device->CreateSampler(&samplerDesc, samplerHandle);
 
 }
 
-void Scene::InitializeTextures(ID3D12Device5Ptr device, ID3D12CommandQueuePtr cmdQueue, PipelineStateBindings& pipelineStateBindings)
+void Scene::InitializeTextures(ID3D12Device5Ptr device, ID3D12CommandQueuePtr cmdQueue)
 {
 	// Create Texture
-	auto srvHandle = pipelineStateBindings.SRVHeap->GetCPUDescriptorHandleForHeapStart();
+	auto srvHandle = SRVHeap->GetCPUDescriptorHandleForHeapStart();
 
 	for (const auto& pair : TextureIndexMap)
 	{

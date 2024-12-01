@@ -10,12 +10,10 @@ Graphics::Graphics(Window& window)
 	SceneCamera(), ImGui(MakeUnique<ImGuiLayer>())
 {
 	Init();
-
-	RootSignature rootSignature(Device, D3D::InitializeGlobalRootSignature(Device));
-	PipelineBindings.Initialize(Device, rootSignature);
+	InitGlobals();
+	FRPass.Init(Device);
 
 	ImGui->OnAttach(Device);
-	
 	InitScene();
 }
 
@@ -37,11 +35,12 @@ void Graphics::Tick(float delta)
 	WaitForSingleObject(FenceEvent, INFINITE);
 
 	SceneCamera.Tick(delta);
-	PipelineBindings.CBGlobalConstants.CPUData.CameraPosition = SceneCamera.GetPosition();
-	PipelineBindings.CBGlobalConstants.CPUData.View = SceneCamera.GetView();
-	PipelineBindings.CBGlobalConstants.CPUData.ViewProjection = SceneCamera.GetViewProjection();
+	CBGlobalConstants.CPUData.CameraPosition = SceneCamera.GetPosition();
+	CBGlobalConstants.CPUData.View = SceneCamera.GetView();
+	CBGlobalConstants.CPUData.ViewProjection = SceneCamera.GetViewProjection();
 
-	PipelineBindings.Tick();
+	CBGlobalConstants.Tick();
+
 	MainScene->Tick();
 
 	PopulateCommandList(frameIndex);
@@ -114,43 +113,25 @@ void Graphics::Init()
 	}
 
 	GRAPHICS_ASSERT(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT,
-											  FrameObjects[0].CmdAllocator, PipelineState.GetInterfacePtr(), IID_PPV_ARGS(&CmdList)));
+											  FrameObjects[0].CmdAllocator, nullptr, IID_PPV_ARGS(&CmdList)));
 	GRAPHICS_ASSERT(Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&Fence)));
 	FenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+}
+
+void Graphics::InitGlobals()
+{
+	SRVHeap = D3D::CreateDescriptorHeap(Device, 100, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
+	UAVHeap = D3D::CreateDescriptorHeap(Device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
+	CBVHeap = D3D::CreateDescriptorHeap(Device, 400, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
+	SamplerHeap = D3D::CreateDescriptorHeap(Device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, true);
+	LightsHeap = D3D::CreateDescriptorHeap(Device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
+
+	CBGlobalConstants.Init(Device, CBVHeap->GetCPUDescriptorHandleForHeapStart());
 }
 
 void Graphics::InitScene()
 {
 	MainScene = MakeUnique<Scene>(Device, SceneCamera);
-
-	Shader<Vertex> vertexShader("Shader");
-	Shader<Pixel> pixelShader("Shader");
-
-	BufferLayout layout{ {"POSITION", DataType::float3},
-						{"NORMAL", DataType::float3},
-						{"TANGENT", DataType::float3},
-						{"BITANGENT", DataType::float3},
-						{"TEXCOORD", DataType::float2}, };
-
-	CD3DX12_RASTERIZER_DESC rasterizerDesc(D3D12_DEFAULT);
-	rasterizerDesc.CullMode = D3D12_CULL_MODE_NONE;  // No culling
-
-	// Describe and create the graphics pipeline state object (PSO).
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
-	psoDesc.InputLayout = layout;
-	psoDesc.pRootSignature = PipelineBindings.GetRootSignaturePtr();
-	psoDesc.VS = CD3DX12_SHADER_BYTECODE(vertexShader.GetBlob());
-	psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.GetBlob());
-	psoDesc.RasterizerState = rasterizerDesc;
-	psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-	psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
-	psoDesc.SampleMask = UINT_MAX;
-	psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	psoDesc.NumRenderTargets = 1;
-	psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-	psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
-	psoDesc.SampleDesc.Count = 1;
-	GRAPHICS_ASSERT(Device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&PipelineState)));
 
 	CmdList->Close();
 
@@ -177,7 +158,8 @@ void Graphics::PopulateCommandList(UINT frameIndex)
 						 D3D12_RESOURCE_STATE_PRESENT,
 						 D3D12_RESOURCE_STATE_RENDER_TARGET);
 
-	PipelineBindings.Bind(CmdList);
+	//PipelineBindings.Bind(CmdList);
+	FRPass.Bind(CmdList);
 
 	D3D12_VIEWPORT viewport = { 0.0f, 0.0f, (FLOAT)SwapChainSize.x, (FLOAT)SwapChainSize.y, 0.0f, 1.0f };
 	CmdList->RSSetViewports(1, &viewport);
@@ -230,13 +212,13 @@ void Graphics::CreateSwapChain()
 
 void Graphics::CreateShaderResources()
 {
-	MainScene->CreateShaderResources(Device, CmdQueue, PipelineBindings);
+	MainScene->CreateShaderResources(Device, CmdQueue);
 }
 
 void Graphics::ResetCommandList()
 {
 	GetCommandAllocator()->Reset();
-	CmdList->Reset(GetCommandAllocator(), PipelineState);
+	CmdList->Reset(GetCommandAllocator(), FRPass.GetPSO());
 }
 
 inline void Graphics::EndFrame(UINT frameIndex)

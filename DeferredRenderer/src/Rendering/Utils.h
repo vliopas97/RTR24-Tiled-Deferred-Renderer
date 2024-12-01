@@ -2,6 +2,8 @@
 #include "Core/Core.h"
 #include <source_location>
 
+struct RootSignature;
+
 #define arraysize(a) (sizeof(a)/sizeof(a[0]))
 #define align_to(_alignment, _val) (((_val + _alignment - 1) / _alignment) * _alignment)
 
@@ -108,6 +110,4 @@ namespace D3D
 		pBuffer->Unmap(0, nullptr);
 		return pBuffer;
 	}
-
-	ID3D12RootSignaturePtr InitializeGlobalRootSignature(ID3D12Device5Ptr device);
 }

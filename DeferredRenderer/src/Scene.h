@@ -14,10 +14,10 @@ public:
 	void Bind(ID3D12GraphicsCommandList4Ptr cmdList);
 	void Tick();
 
-	void CreateShaderResources(ID3D12Device5Ptr device, ID3D12CommandQueuePtr cmdQueue, PipelineStateBindings& pipelineStateBindings);
+	void CreateShaderResources(ID3D12Device5Ptr device, ID3D12CommandQueuePtr cmdQueue);
 
 private:
-	void InitializeTextures(ID3D12Device5Ptr device, ID3D12CommandQueuePtr cmdQueue, PipelineStateBindings& pipelineStateBindings);
+	void InitializeTextures(ID3D12Device5Ptr device, ID3D12CommandQueuePtr cmdQueue);
 	void LoadModels(const Camera& camera);
 	void InitializeTextureIndices();
 

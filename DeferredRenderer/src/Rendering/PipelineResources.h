@@ -4,6 +4,13 @@
 #include "Buffer.h"
 #include "Shaders/HLSLCompat.h"
 
+extern ID3D12DescriptorHeapPtr SRVHeap;
+extern ID3D12DescriptorHeapPtr UAVHeap;
+extern ID3D12DescriptorHeapPtr CBVHeap;
+extern ID3D12DescriptorHeapPtr SamplerHeap;
+extern ID3D12DescriptorHeapPtr LightsHeap;
+extern ConstantBuffer<PipelineConstants> CBGlobalConstants;
+
 enum RootParamTypes : uint32_t
 {
 	StandardDescriptors = 0,
@@ -35,16 +42,7 @@ public:
 											  UINT numDescriptors, 
 											  UINT baseShaderRegister, 
 											  UINT registerSpace = 0,
-											  UINT offsetInDescriptorsFromTableStart = 0)
-	{
-		D3D12_DESCRIPTOR_RANGE range{};
-		range.RangeType = type;
-		range.BaseShaderRegister = baseShaderRegister;
-		range.NumDescriptors = numDescriptors;
-		range.RegisterSpace = registerSpace;
-		range.OffsetInDescriptorsFromTableStart = offsetInDescriptorsFromTableStart;
-		return range;
-	}
+											  UINT offsetInDescriptorsFromTableStart = 0);
 };
 
 class RootParameterBuilder
@@ -52,39 +50,19 @@ class RootParameterBuilder
 public:
 	static D3D12_ROOT_PARAMETER CreateDescriptorTable(
 		const std::vector<D3D12_DESCRIPTOR_RANGE>& ranges,
-		D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL)
-	{
-		D3D12_ROOT_PARAMETER param{};
-		param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-		param.ShaderVisibility = visibility;
+		D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL);
 
-		D3D12_DESCRIPTOR_RANGE* rangesData = new D3D12_DESCRIPTOR_RANGE[ranges.size()];
-		std::copy(ranges.begin(), ranges.end(), rangesData);
-
-		param.DescriptorTable.NumDescriptorRanges = static_cast<UINT>(ranges.size());
-		param.DescriptorTable.pDescriptorRanges = rangesData;
-
-		return param;
-	}
-
-	static D3D12_ROOT_PARAMETER CreateConstantBufferView(
+	static D3D12_ROOT_PARAMETER CreateDescriptor(
 		D3D12_ROOT_PARAMETER_TYPE rootParameterType,
 		D3D12_SHADER_VISIBILITY visibility,
 		UINT shaderRegister,
-		UINT registerSpace = 0)
-	{
-		D3D12_ROOT_PARAMETER param{};
-		param.ParameterType = rootParameterType;
-		param.ShaderVisibility = visibility;
-		param.Descriptor.ShaderRegister = shaderRegister;
-		param.Descriptor.RegisterSpace = registerSpace;
-		return param;
-	}
+		UINT registerSpace = 0);
 
 };
 
 struct RootSignature
 {
+	RootSignature() = default;
 	RootSignature(ID3D12Device5Ptr device);
 	RootSignature(ID3D12Device5Ptr device, ID3D12RootSignaturePtr rootSig);
 	template <typename Fn, typename... Args>
@@ -97,36 +75,37 @@ struct RootSignature
 		Subobject.pDesc = &Interface;
 	}
 
+	void AddDescriptorTable(
+		const std::vector<D3D12_DESCRIPTOR_RANGE>& ranges,
+		D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL);
+
+	void AddDescriptor(
+		D3D12_ROOT_PARAMETER_TYPE rootParameterType,
+		D3D12_SHADER_VISIBILITY visibility,
+		UINT shaderRegister, 
+		UINT registerSpace = 0);
+
+	void Build(ID3D12Device5Ptr device, D3D12_ROOT_SIGNATURE_FLAGS flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
 	ID3D12RootSignaturePtr RootSignaturePtr;
 	ID3D12RootSignature* Interface = nullptr;
 	D3D12_STATE_SUBOBJECT Subobject = {};
-};
-
-struct PipelineStateBindings
-{
-	using RootSignaturePtr = UniquePtr<RootSignature>;
-	PipelineStateBindings() = default;
-	~PipelineStateBindings() = default;
-
-	void Initialize(ID3D12Device5Ptr device, RootSignature rootSignature);
-	ID3D12RootSignature* GetRootSignaturePtr();
-
-	void Bind(ID3D12GraphicsCommandList4Ptr cmdList);
-	void Tick();
 
 private:
-	void Setup(ID3D12Device5Ptr device);
+	std::vector<D3D12_ROOT_PARAMETER> RootParameters;
+	std::vector<std::vector<D3D12_DESCRIPTOR_RANGE>> DescriptorRangeStorage; // To manage descriptor range memory
+};
+
+struct RenderPassResources
+{
+public:
+	virtual ~RenderPassResources() = default;
+	void Bind(ID3D12GraphicsCommandList4Ptr cmdList);
+	virtual void Setup(ID3D12Device5Ptr device);
+
+private:
 	void BindDescriptorHeap(ID3D12GraphicsCommandList4Ptr cmdList, ID3D12DescriptorHeapPtr heap);
 
 public:
-	ID3D12DescriptorHeapPtr SRVHeap;
-	ID3D12DescriptorHeapPtr UAVHeap;
-	ID3D12DescriptorHeapPtr CBVHeap;
-	ID3D12DescriptorHeapPtr SamplerHeap;
-	ID3D12DescriptorHeapPtr LightsHeap;
-
-	ConstantBuffer<PipelineConstants> CBGlobalConstants;
-
-private:
-	RootSignaturePtr RootSignatureData;
+	std::vector<ID3D12DescriptorHeapPtr> Heaps;
 };

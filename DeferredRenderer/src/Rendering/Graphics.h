@@ -8,6 +8,7 @@
 #include "Actors/Actor.h"
 #include "Scene.h"
 #include "Rendering/PipelineResources.h"
+#include "Rendering/RenderPass.h"
 
 class ImGuiLayer;
 
@@ -26,6 +27,7 @@ struct Graphics
 
 private:
 	void Init();
+    void InitGlobals();
     void InitScene();
 	void Shutdown();
 	void PopulateCommandList(UINT frameIndex);
@@ -51,8 +53,7 @@ private:
 	ID3D12CommandQueuePtr CmdQueue;
     ID3D12GraphicsCommandList4Ptr CmdList;
 
-    PipelineStateBindings PipelineBindings;
-    ID3D12PipelineStatePtr PipelineState;
+    ForwardRenderPass FRPass;
     
     UniquePtr<Scene> MainScene;
 
