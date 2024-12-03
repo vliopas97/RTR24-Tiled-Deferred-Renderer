@@ -1,7 +1,7 @@
 #include "Actor.h"
 #include "Primitives.h"
 #include "Rendering/Shader.h"
-#include "Rendering/PipelineResources.h"
+#include "Rendering/RootSignature.h"
 #include "Camera.h"
 
 Actor::Actor(ID3D12Device5Ptr device, const Camera& camera)

@@ -5,6 +5,17 @@
 
 #include "Shader.h"
 
+namespace
+{
+	auto& SRVHeap = Globals.SRVHeap;
+	auto& UAVHeap = Globals.UAVHeap;
+	auto& CBVHeap = Globals.CBVHeap;
+	auto& SamplerHeap = Globals.SamplerHeap;
+	auto& LightsHeap = Globals.LightsHeap;
+
+	auto& CBGlobalConstants = Globals.CBGlobalConstants;
+}
+
 Graphics::Graphics(Window& window)
 	:WinHandle(window.GetHandle()), SwapChainSize(window.GetWidth(), window.GetHeight()), 
 	SceneCamera(), ImGui(MakeUnique<ImGuiLayer>())
@@ -84,12 +95,6 @@ void Graphics::Init()
 												   RTVHeap.UsedEntries,
 												   DXGI_FORMAT_R8G8B8A8_UNORM_SRGB);
 
-		// Create Depth Stencil Buffers
-		D3D12_DEPTH_STENCIL_VIEW_DESC depthStencilDesc{};
-		depthStencilDesc.Format = DXGI_FORMAT_D32_FLOAT;
-		depthStencilDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
-		depthStencilDesc.Flags = D3D12_DSV_FLAG_NONE;
-
 		D3D12_CLEAR_VALUE depthOptimizedClearValue{};
 		depthOptimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT;
 		depthOptimizedClearValue.DepthStencil.Depth = 1.0f;
@@ -158,7 +163,6 @@ void Graphics::PopulateCommandList(UINT frameIndex)
 						 D3D12_RESOURCE_STATE_PRESENT,
 						 D3D12_RESOURCE_STATE_RENDER_TARGET);
 
-	//PipelineBindings.Bind(CmdList);
 	FRPass.Bind(CmdList);
 
 	D3D12_VIEWPORT viewport = { 0.0f, 0.0f, (FLOAT)SwapChainSize.x, (FLOAT)SwapChainSize.y, 0.0f, 1.0f };
@@ -221,7 +225,7 @@ void Graphics::ResetCommandList()
 	CmdList->Reset(GetCommandAllocator(), FRPass.GetPSO());
 }
 
-inline void Graphics::EndFrame(UINT frameIndex)
+void Graphics::EndFrame(UINT frameIndex)
 {
 	D3D::ResourceBarrier(CmdList,
 						 FrameObjects[frameIndex].SwapChainBuffer,

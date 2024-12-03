@@ -1,7 +1,6 @@
 #include "RenderPass.h"
 #include "Core/Exception.h"
 #include "Shader.h"
-#include "PipelineResources.h"
 
 void RenderPass::Init(ID3D12Device5Ptr device)
 {

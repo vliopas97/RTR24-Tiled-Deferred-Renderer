@@ -1,6 +1,8 @@
 #include "Scene.h"
 #include "Camera.h"
 #include "Rendering/Actors/Model.h"
+#include "Rendering/Resources.h"
+
 #include <filesystem>
 #include <unordered_map>
 #include <iostream>
@@ -36,10 +38,10 @@ void Scene::Tick()
 
 void Scene::CreateShaderResources(ID3D12Device5Ptr device, ID3D12CommandQueuePtr cmdQueue)
 {
-	auto uavHandle = UAVHeap->GetCPUDescriptorHandleForHeapStart();
-	auto srvHandle = SRVHeap->GetCPUDescriptorHandleForHeapStart();
-	auto cbvHandle = CBVHeap->GetCPUDescriptorHandleForHeapStart();
-	auto lightsHandle = LightsHeap->GetCPUDescriptorHandleForHeapStart();
+	auto uavHandle = Globals.UAVHeap->GetCPUDescriptorHandleForHeapStart();
+	auto srvHandle = Globals.SRVHeap->GetCPUDescriptorHandleForHeapStart();
+	auto cbvHandle = Globals.CBVHeap->GetCPUDescriptorHandleForHeapStart();
+	auto lightsHandle = Globals.LightsHeap->GetCPUDescriptorHandleForHeapStart();
 
 	cbvHandle.ptr += Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV); // 1st element of desc table occupied
 	for (auto& actor : Actors)
@@ -68,7 +70,7 @@ void Scene::CreateShaderResources(ID3D12Device5Ptr device, ID3D12CommandQueuePtr
 	samplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
 
 	// Get the handle to the sampler heap
-	CD3DX12_CPU_DESCRIPTOR_HANDLE samplerHandle(SamplerHeap->GetCPUDescriptorHandleForHeapStart());
+	CD3DX12_CPU_DESCRIPTOR_HANDLE samplerHandle(Globals.SamplerHeap->GetCPUDescriptorHandleForHeapStart());
 	device->CreateSampler(&samplerDesc, samplerHandle);
 
 }
@@ -76,7 +78,7 @@ void Scene::CreateShaderResources(ID3D12Device5Ptr device, ID3D12CommandQueuePtr
 void Scene::InitializeTextures(ID3D12Device5Ptr device, ID3D12CommandQueuePtr cmdQueue)
 {
 	// Create Texture
-	auto srvHandle = SRVHeap->GetCPUDescriptorHandleForHeapStart();
+	auto srvHandle = Globals.SRVHeap->GetCPUDescriptorHandleForHeapStart();
 
 	for (const auto& pair : TextureIndexMap)
 	{

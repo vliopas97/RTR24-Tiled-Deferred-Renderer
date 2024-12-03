@@ -1,13 +1,7 @@
-#include "PipelineResources.h"
-#include "Utils.h"
+#include "RootSignature.h"
 #include "Core/Exception.h"
-
-ID3D12DescriptorHeapPtr SRVHeap{};
-ID3D12DescriptorHeapPtr UAVHeap{};
-ID3D12DescriptorHeapPtr CBVHeap{};
-ID3D12DescriptorHeapPtr SamplerHeap{};
-ID3D12DescriptorHeapPtr LightsHeap{};
-ConstantBuffer<PipelineConstants> CBGlobalConstants{};
+#include "Resources.h"
+#include "Utils.h"
 
 RootSignature::RootSignature(ID3D12Device5Ptr device)
 {
@@ -97,11 +91,11 @@ void RenderPassResources::Bind(ID3D12GraphicsCommandList4Ptr cmdList)
 
 void RenderPassResources::Setup(ID3D12Device5Ptr device)
 {
-	Heaps.push_back(SRVHeap);
-	Heaps.push_back(UAVHeap);
-	Heaps.push_back(CBVHeap);
-	Heaps.push_back(SamplerHeap);
-	Heaps.push_back(LightsHeap);
+	Heaps.push_back(Globals.SRVHeap);
+	Heaps.push_back(Globals.UAVHeap);
+	Heaps.push_back(Globals.CBVHeap);
+	Heaps.push_back(Globals.SamplerHeap);
+	Heaps.push_back(Globals.LightsHeap);
 }
 
 void RenderPassResources::BindDescriptorHeap(ID3D12GraphicsCommandList4Ptr cmdList, ID3D12DescriptorHeapPtr heap)

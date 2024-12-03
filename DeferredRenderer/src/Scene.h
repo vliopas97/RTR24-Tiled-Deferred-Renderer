@@ -4,7 +4,7 @@
 #include "Rendering/Actors/Lights.h"
 #include "Rendering/Shader.h"
 #include "Rendering/Texture.h"
-#include "Rendering/PipelineResources.h"
+#include "Rendering/RootSignature.h"
 
 
 class Scene

@@ -7,8 +7,9 @@
 #include "Window/Window.h"
 #include "Actors/Actor.h"
 #include "Scene.h"
-#include "Rendering/PipelineResources.h"
+#include "Rendering/RootSignature.h"
 #include "Rendering/RenderPass.h"
+#include "Rendering/Resources.h"
 
 class ImGuiLayer;
 

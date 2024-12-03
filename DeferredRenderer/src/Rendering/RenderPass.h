@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Core/Core.h"
-#include "Rendering/PipelineResources.h"
+#include "Rendering/RootSignature.h"
 
 class RenderPass
 {

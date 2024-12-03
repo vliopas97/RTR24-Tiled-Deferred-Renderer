@@ -4,13 +4,6 @@
 #include "Buffer.h"
 #include "Shaders/HLSLCompat.h"
 
-extern ID3D12DescriptorHeapPtr SRVHeap;
-extern ID3D12DescriptorHeapPtr UAVHeap;
-extern ID3D12DescriptorHeapPtr CBVHeap;
-extern ID3D12DescriptorHeapPtr SamplerHeap;
-extern ID3D12DescriptorHeapPtr LightsHeap;
-extern ConstantBuffer<PipelineConstants> CBGlobalConstants;
-
 enum RootParamTypes : uint32_t
 {
 	StandardDescriptors = 0,
@@ -35,28 +28,26 @@ concept ValidRootSignatureFactory = requires(Fn fn, Args... args)
 		std::is_same_v<std::invoke_result_t<Fn, Args...>, ID3D12RootSignaturePtr>;
 };
 
-class DescriptorRangeBuilder
+namespace DescriptorRangeBuilder
 {
-public:
-	static D3D12_DESCRIPTOR_RANGE CreateRange(D3D12_DESCRIPTOR_RANGE_TYPE type, 
-											  UINT numDescriptors, 
-											  UINT baseShaderRegister, 
-											  UINT registerSpace = 0,
-											  UINT offsetInDescriptorsFromTableStart = 0);
+
+	D3D12_DESCRIPTOR_RANGE CreateRange(D3D12_DESCRIPTOR_RANGE_TYPE type,
+									   UINT numDescriptors, 
+									   UINT baseShaderRegister, 
+									   UINT registerSpace = 0,
+									   UINT offsetInDescriptorsFromTableStart = 0);
 };
 
-class RootParameterBuilder
+namespace RootParameterBuilder
 {
-public:
-	static D3D12_ROOT_PARAMETER CreateDescriptorTable(
-		const std::vector<D3D12_DESCRIPTOR_RANGE>& ranges,
-		D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL);
 
-	static D3D12_ROOT_PARAMETER CreateDescriptor(
-		D3D12_ROOT_PARAMETER_TYPE rootParameterType,
-		D3D12_SHADER_VISIBILITY visibility,
-		UINT shaderRegister,
-		UINT registerSpace = 0);
+	D3D12_ROOT_PARAMETER CreateDescriptorTable(const std::vector<D3D12_DESCRIPTOR_RANGE>& ranges,
+											   D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL);
+
+	D3D12_ROOT_PARAMETER CreateDescriptor(D3D12_ROOT_PARAMETER_TYPE rootParameterType, 
+										  D3D12_SHADER_VISIBILITY visibility, 
+										  UINT shaderRegister, 
+										  UINT registerSpace = 0);
 
 };
 
