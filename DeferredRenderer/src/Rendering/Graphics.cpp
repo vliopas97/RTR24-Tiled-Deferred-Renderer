@@ -14,6 +14,12 @@ namespace
 	auto& LightsHeap = Globals.LightsHeap;
 
 	auto& CBGlobalConstants = Globals.CBGlobalConstants;
+
+	auto& Fence = Globals.Fence;
+	auto& FenceEvent = Globals.FenceEvent;
+	auto& FenceValue = Globals.FenceValue;
+
+	auto& CmdQueue = Globals.CmdQueue;
 }
 
 Graphics::Graphics(Window& window)
@@ -22,10 +28,11 @@ Graphics::Graphics(Window& window)
 {
 	Init();
 	InitGlobals();
-	FRPass.Init(Device);
+	//FRPass.Init(Device);
 
 	ImGui->OnAttach(Device);
 	InitScene();
+	Graph.Init(Device);
 }
 
 Graphics::~Graphics()
@@ -35,10 +42,9 @@ Graphics::~Graphics()
 
 void Graphics::Tick(float delta)
 {
-	ResetCommandList();
 	uint32_t frameIndex = SwapChain->GetCurrentBackBufferIndex();
 
-	ImGui->Begin();
+	//ImGui->Begin();
 
 	// Update Pipeline Constants
 	CmdQueue->Signal(Fence, ++FenceValue);
@@ -50,12 +56,17 @@ void Graphics::Tick(float delta)
 	CBGlobalConstants.CPUData.View = SceneCamera.GetView();
 	CBGlobalConstants.CPUData.ViewProjection = SceneCamera.GetViewProjection();
 
+	GlobalResManager::SetRTV(FrameObjects[frameIndex].SwapChainBuffer, FrameObjects[frameIndex].RTVHandle);
+	GlobalResManager::SetDSV(FrameObjects[frameIndex].DepthStencilBuffer, FrameObjects[frameIndex].DSVHandle);
+	GlobalResManager::SetCmdAllocator(FrameObjects[frameIndex].CmdAllocator);
+	
 	CBGlobalConstants.Tick();
-
+	Graph.Tick();
 	MainScene->Tick();
 
+	ResetCommandList();
 	PopulateCommandList(frameIndex);
-	ImGui->End(CmdList);
+	//ImGui->End(CmdList);
 
 	EndFrame(frameIndex);
 }
@@ -131,6 +142,10 @@ void Graphics::InitGlobals()
 	SamplerHeap = D3D::CreateDescriptorHeap(Device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, true);
 	LightsHeap = D3D::CreateDescriptorHeap(Device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
 
+	GlobalResManager::SetRTV(FrameObjects[0].SwapChainBuffer, FrameObjects[0].RTVHandle);
+	GlobalResManager::SetDSV(FrameObjects[0].DepthStencilBuffer, FrameObjects[0].DSVHandle);
+	GlobalResManager::SetCmdAllocator(FrameObjects[0].CmdAllocator);
+
 	CBGlobalConstants.Init(Device, CBVHeap->GetCPUDescriptorHandleForHeapStart());
 }
 
@@ -163,19 +178,22 @@ void Graphics::PopulateCommandList(UINT frameIndex)
 						 D3D12_RESOURCE_STATE_PRESENT,
 						 D3D12_RESOURCE_STATE_RENDER_TARGET);
 
-	FRPass.Bind(CmdList);
+	// RENEW RTV, DSV in Graph - Set them as data members and update per frame from Globals
 
-	D3D12_VIEWPORT viewport = { 0.0f, 0.0f, (FLOAT)SwapChainSize.x, (FLOAT)SwapChainSize.y, 0.0f, 1.0f };
-	CmdList->RSSetViewports(1, &viewport);
+	//FRPass.Bind(CmdList);
+	Graph.Execute(CmdList);
 
-	// Set scissor rect
-	D3D12_RECT scissorRect = { 0, 0, SwapChainSize.x, SwapChainSize.y };
-	CmdList->RSSetScissorRects(1, &scissorRect);
+	//D3D12_VIEWPORT viewport = { 0.0f, 0.0f, (FLOAT)SwapChainSize.x, (FLOAT)SwapChainSize.y, 0.0f, 1.0f };
+	//CmdList->RSSetViewports(1, &viewport);
 
-	const float clearColor[4] = { 0.4f, 0.6f, 0.2f, 1.0f };
-	CmdList->OMSetRenderTargets(1, &FrameObjects[frameIndex].RTVHandle, FALSE, &FrameObjects[frameIndex].DSVHandle);
-	CmdList->ClearRenderTargetView(FrameObjects[frameIndex].RTVHandle, clearColor, 0, nullptr);
-	CmdList->ClearDepthStencilView(FrameObjects[frameIndex].DSVHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0.0f, 0, nullptr);
+	//// Set scissor rect
+	//D3D12_RECT scissorRect = { 0, 0, SwapChainSize.x, SwapChainSize.y };
+	//CmdList->RSSetScissorRects(1, &scissorRect);
+
+	//CmdList->OMSetRenderTargets(1, &FrameObjects[frameIndex].RTVHandle, FALSE, &FrameObjects[frameIndex].DSVHandle);
+	//const float clearColor[4] = { 0.4f, 0.6f, 0.2f, 1.0f };
+	//CmdList->ClearRenderTargetView(FrameObjects[frameIndex].RTVHandle, clearColor, 0, nullptr);
+	//CmdList->ClearDepthStencilView(FrameObjects[frameIndex].DSVHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0.0f, 0, nullptr);
 
 	MainScene->Bind(CmdList);
 }
@@ -222,7 +240,7 @@ void Graphics::CreateShaderResources()
 void Graphics::ResetCommandList()
 {
 	GetCommandAllocator()->Reset();
-	CmdList->Reset(GetCommandAllocator(), FRPass.GetPSO());
+	CmdList->Reset(GetCommandAllocator(), Graph.Passes[0]->GetPSO());
 }
 
 void Graphics::EndFrame(UINT frameIndex)

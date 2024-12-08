@@ -155,7 +155,7 @@ if(!condition) throw EXCEPTION(msg);
 }
 
 #define GRAPHICS_DEVICE_REMOVED_EXCEPTION(hr) DeviceRemovedException( __LINE__,__FILE__,(hr),InfoManager.GetMessages() )
-#define GRAPHICS_INFO_ONLY(call) {DXGIInfoManager InfoManager; InfoManager.Reset(); (call); {auto v = InfoManager.GetMessages(); if(!v.empty()) {throw GraphicsExceptionInfo( __LINE__,__FILE__,InfoManager.GetMessages());}}}
+#define GRAPHICS_INFO_ONLY(call) {DXGIInfoManager InfoManager; InfoManager.Reset(); call; {auto v = InfoManager.GetMessages(); if(!v.empty()) {throw GraphicsExceptionInfo( __LINE__,__FILE__,InfoManager.GetMessages());}}}
 //
 //#else
 //#define GRAPHICS_EXCEPTION(hr) GraphicsException( __LINE__,__FILE__,(hr))

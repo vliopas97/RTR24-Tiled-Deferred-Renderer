@@ -1,6 +1,8 @@
 #pragma once
 #include "Core/Core.h"
+
 #include <source_location>
+#include <sstream>
 
 struct RootSignature;
 
@@ -17,6 +19,18 @@ std::string convertBlobToString(BlotType* pBlob)
 	memcpy(infoLog.data(), pBlob->GetBufferPointer(), pBlob->GetBufferSize());
 	infoLog[pBlob->GetBufferSize()] = 0;
 	return std::string(infoLog.data());
+}
+
+inline std::vector<std::string> SplitString(const std::string& input, const std::string& delim)
+{
+	std::vector<std::string> output;
+	std::istringstream stream(input);
+
+	std::string part;
+	while (std::getline(stream, part, '.'))
+		output.push_back(part);
+
+	return output;
 }
 
 template<typename T>

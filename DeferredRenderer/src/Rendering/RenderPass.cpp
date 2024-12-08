@@ -1,6 +1,11 @@
 #include "RenderPass.h"
 #include "Core/Exception.h"
 #include "Shader.h"
+#include "Utils.h"
+
+RenderPass::RenderPass(std::string&& name)
+	:Name(name), RTVBuffer(MakeShared<ID3D12ResourcePtr>()), DSVBuffer(MakeShared<ID3D12ResourcePtr>())
+{}
 
 void RenderPass::Init(ID3D12Device5Ptr device)
 {
@@ -15,6 +20,87 @@ void RenderPass::Bind(ID3D12GraphicsCommandList4Ptr cmdList)
 	//RootSignatureData
 	cmdList->SetGraphicsRootSignature(RootSignatureData.RootSignaturePtr.GetInterfacePtr());
 	Resources.Bind(cmdList);
+
+	D3D12_VIEWPORT viewport = { 0.0f, 0.0f, (FLOAT)Globals.WindowDimensions.x, (FLOAT)Globals.WindowDimensions.y, 0.0f, 1.0f };
+	cmdList->RSSetViewports(1, &viewport);
+
+	// Set scissor rect
+	D3D12_RECT scissorRect = { 0, 0, Globals.WindowDimensions.x, Globals.WindowDimensions.y };
+	cmdList->RSSetScissorRects(1, &scissorRect);
+	cmdList->OMSetRenderTargets(1, &Globals.RTVHandle, FALSE, &Globals.DSVHandle);
+
+	const float clearColor[4] = { 0.4f, 0.6f, 0.2f, 1.0f };
+	cmdList->ClearRenderTargetView(Globals.RTVHandle, clearColor, 0, nullptr);
+	cmdList->ClearDepthStencilView(Globals.DSVHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0.0f, 0, nullptr);
+}
+
+PassInputBase& RenderPass::GetInput(const std::string& name) const
+{
+	for (auto& in : Inputs)
+		if (in->GetName() == name)
+			return *in;
+
+	throw std::range_error("Element not found among possible Inputs");
+}
+
+PassOutputBase& RenderPass::GetOutput(const std::string& name) const
+{
+	for (auto& out : Outputs)
+		if (out->GetName() == name)
+			return *out;
+
+	throw std::range_error("Element not found among possible Outputs");
+}
+
+void RenderPass::SetInput(const std::string& inputName, const std::string& targetName)
+{
+	auto& input = GetInput(inputName);
+	auto targetNames = SplitString(targetName, ".");
+
+	if (targetNames.size() != 2)
+		throw std::invalid_argument("Invalid target name");
+
+	input.SetTarget(std::move(targetNames[0]), std::move(targetNames[1]));
+}
+
+void RenderPass::Validate()
+{
+	for (auto& in : Inputs)
+		in->Validate();
+	for (auto& out : Outputs)
+		out->Validate();
+}
+
+void RenderPass::Register(UniquePtr<PassInputBase> input)
+{
+	auto it = std::find_if(Inputs.begin(), Inputs.end(),
+						   [&input](const UniquePtr<PassInputBase>& in)
+						   {
+							   return in->GetName() == input->GetName();
+						   });
+
+	if (it != Inputs.end()) throw std::invalid_argument("Registered input in conflict with existing registered input");
+	Inputs.emplace_back(std::move(input));
+}
+
+void RenderPass::Register(UniquePtr<PassOutputBase> output)
+{
+	auto it = std::find_if(Outputs.begin(), Outputs.end(),
+						   [&output](const UniquePtr<PassOutputBase>& in)
+						   {
+							   return in->GetName() == output->GetName();
+						   });
+
+	if (it != Outputs.end()) throw std::invalid_argument("Registered output in conflict with existing registered input");
+	Outputs.emplace_back(std::move(output));
+}
+
+ForwardRenderPass::ForwardRenderPass(std::string&& name)
+	: RenderPass(std::move(name))
+{
+	Register<PassInput<ID3D12ResourcePtr>>("renderTarget", RTVBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	Register<PassInput<ID3D12ResourcePtr>>("depthBuffer", DSVBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+	Register<PassOutput<ID3D12ResourcePtr>>("renderTarget", RTVBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
 }
 
 void ForwardRenderPass::InitRootSignature()

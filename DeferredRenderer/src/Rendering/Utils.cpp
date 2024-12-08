@@ -77,7 +77,8 @@ void D3D::ResourceBarrier(ID3D12GraphicsCommandList4Ptr cmdList, ID3D12ResourceP
 	barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 	barrier.Transition.StateBefore = prevState;
 	barrier.Transition.StateAfter = nextState;
-	cmdList->ResourceBarrier(1, &barrier);
+	
+	GRAPHICS_INFO_ONLY(cmdList->ResourceBarrier(1, &barrier));
 }
 
 uint64_t D3D::SubmitCommandList(ID3D12GraphicsCommandList4Ptr cmdList, ID3D12CommandQueuePtr cmdQueue, ID3D12FencePtr fence, uint64_t fenceValue)

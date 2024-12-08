@@ -10,6 +10,7 @@
 #include "Rendering/RootSignature.h"
 #include "Rendering/RenderPass.h"
 #include "Rendering/Resources.h"
+#include "Rendering/RenderGraph.h"
 
 class ImGuiLayer;
 
@@ -22,7 +23,6 @@ struct Graphics
 
     ID3D12Device5Ptr GetDevice() { return Device; }
     ID3D12CommandAllocatorPtr GetCommandAllocator() { return FrameObjects[SwapChain->GetCurrentBackBufferIndex()].CmdAllocator; }
-    ID3D12CommandQueuePtr GetCommandQueue() { return CmdQueue; }
     ID3D12GraphicsCommandList4Ptr GetCommandList() { return CmdList; }
     const UniquePtr<ImGuiLayer>& GetImGui() { return ImGui; }
 
@@ -51,16 +51,17 @@ private:
 	IDXGISwapChain3Ptr SwapChain;
     glm::uvec2 SwapChainSize;
 
-	ID3D12CommandQueuePtr CmdQueue;
+	//ID3D12CommandQueuePtr CmdQueue;
     ID3D12GraphicsCommandList4Ptr CmdList;
 
-    ForwardRenderPass FRPass;
+    //ForwardRenderPass FRPass;
+    RenderGraph Graph;
     
     UniquePtr<Scene> MainScene;
 
-    ID3D12FencePtr Fence;
-    HANDLE FenceEvent;
-    uint64_t FenceValue = 0;
+    //ID3D12FencePtr Fence;
+    //HANDLE FenceEvent;
+    //uint64_t FenceValue = 0;
 
     struct
     {
