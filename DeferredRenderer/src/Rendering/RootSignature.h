@@ -86,17 +86,3 @@ private:
 	std::vector<D3D12_ROOT_PARAMETER> RootParameters;
 	std::vector<std::vector<D3D12_DESCRIPTOR_RANGE>> DescriptorRangeStorage; // To manage descriptor range memory
 };
-
-struct RenderPassResources
-{
-public:
-	virtual ~RenderPassResources() = default;
-	void Bind(ID3D12GraphicsCommandList4Ptr cmdList);
-	virtual void Setup(ID3D12Device5Ptr device);
-
-private:
-	void BindDescriptorHeap(ID3D12GraphicsCommandList4Ptr cmdList, ID3D12DescriptorHeapPtr heap);
-
-public:
-	std::vector<ID3D12DescriptorHeapPtr> Heaps;
-};

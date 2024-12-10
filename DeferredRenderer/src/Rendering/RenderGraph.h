@@ -10,7 +10,7 @@ public:
 	void Init(ID3D12Device5Ptr device);
 	~RenderGraph() = default;
 
-	void Execute(ID3D12GraphicsCommandList4Ptr cmdList);
+	void Execute(ID3D12GraphicsCommandList4Ptr cmdList, const class Scene& scene);
 
 	template <typename PassType>
 	requires std::is_base_of_v<RenderPass, PassType>
@@ -42,9 +42,10 @@ private:
 	void AddGlobalOutputs(UniquePtr<PassOutputBase> out);
 
 private:
+	using Transitions2DArray = std::vector<std::vector<UniquePtr<TransitionBase>>>;
 	std::vector<UniquePtr<PassInputBase>> GraphOutputs;
 	std::vector<UniquePtr<PassOutputBase>> GraphInputs;
-	std::vector<std::vector<D3D12_RESOURCE_BARRIER>> Transitions;
+	Transitions2DArray Transitions;
 
 	SharedPtr<ID3D12ResourcePtr> RTVBuffer{};
 	SharedPtr<ID3D12ResourcePtr> DSVBuffer{};

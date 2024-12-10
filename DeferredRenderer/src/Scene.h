@@ -11,7 +11,7 @@ class Scene
 {
 public:
 	Scene(ID3D12Device5Ptr device, const class Camera& camera);
-	void Bind(ID3D12GraphicsCommandList4Ptr cmdList);
+	void Bind(ID3D12GraphicsCommandList4Ptr cmdList) const;
 	void Tick();
 
 	void CreateShaderResources(ID3D12Device5Ptr device, ID3D12CommandQueuePtr cmdQueue);

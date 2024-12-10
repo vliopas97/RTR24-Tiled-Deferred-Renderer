@@ -78,28 +78,3 @@ D3D12_ROOT_PARAMETER RootParameterBuilder::CreateDescriptor(D3D12_ROOT_PARAMETER
 	return param;
 }
 
-void RenderPassResources::Bind(ID3D12GraphicsCommandList4Ptr cmdList)
-{
-	UINT rootParameterIndex = 0;
-	for (const auto& heap : Heaps)
-	{
-		BindDescriptorHeap(cmdList, heap);
-		cmdList->SetGraphicsRootDescriptorTable(rootParameterIndex++, heap->GetGPUDescriptorHandleForHeapStart());
-	}
-
-}
-
-void RenderPassResources::Setup(ID3D12Device5Ptr device)
-{
-	Heaps.push_back(Globals.SRVHeap);
-	Heaps.push_back(Globals.UAVHeap);
-	Heaps.push_back(Globals.CBVHeap);
-	Heaps.push_back(Globals.SamplerHeap);
-	Heaps.push_back(Globals.LightsHeap);
-}
-
-void RenderPassResources::BindDescriptorHeap(ID3D12GraphicsCommandList4Ptr cmdList, ID3D12DescriptorHeapPtr heap)
-{
-	std::array<ID3D12DescriptorHeap*, 1> heaps = { heap };
-	cmdList->SetDescriptorHeaps(heaps.size(), heaps.data());
-}

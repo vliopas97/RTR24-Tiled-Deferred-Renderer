@@ -49,114 +49,43 @@ inline constexpr bool is_com_ptr_v<_com_ptr_t<T>> = true;
 template <typename T>
 concept ResourceType = is_com_ptr_v<T>;
 
-class PassOutputBase;
-
-class PassInputBase
+struct TransitionBase
 {
-public:
-	virtual ~PassInputBase() = default;
-
-	inline const std::string& GetName() const noexcept { return Name; }
-	inline const std::string& GetPassName() const noexcept { return PassName; }
-	inline const std::string& GetOutputName() const noexcept { return OutputName; }
-	inline const D3D12_RESOURCE_STATES GetResourceState() const { return State; }
-
-	void SetTarget(std::string passName, std::string outputName);
-
-	virtual void Bind(PassOutputBase& out) = 0;
-	virtual void Validate() const = 0;
-	virtual D3D12_RESOURCE_BARRIER GetResourceTransition(D3D12_RESOURCE_STATES prev) const = 0;
-
-protected:
-	PassInputBase(std::string&& name, D3D12_RESOURCE_STATES state);
-
-protected:
-	D3D12_RESOURCE_STATES State;
-
-private:
-	std::string Name;
-	std::string PassName;
-	std::string OutputName;
-
+	virtual ~TransitionBase() = default;
+	virtual void Apply(ID3D12GraphicsCommandList4Ptr cmdList) = 0;
 };
 
 template<ResourceType T>
-class PassInput : public PassInputBase
+struct Transition : public TransitionBase
 {
-public:
-	PassInput(std::string&& name, SharedPtr<T>& resource, D3D12_RESOURCE_STATES state)
-		:PassInputBase(std::move(name), state), Resource(resource)
+	Transition(SharedPtr<T>& resource, D3D12_RESOURCE_STATES previous, D3D12_RESOURCE_STATES next)
+		:Resource(resource), Previous(previous), Next(next)
 	{}
 
-	virtual void Validate() const override
+	void Apply(ID3D12GraphicsCommandList4Ptr cmdList) override
 	{
-		if (!IsLinked) throw std::runtime_error("Unlinked input");
+		cmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(
+			*Resource,
+			Previous,
+			Next
+		));
 	}
 
-	virtual void Bind(PassOutputBase& out) override;
-	inline const D3D12_RESOURCE_STATES GetResourceState() const { return State; }
-
-	virtual D3D12_RESOURCE_BARRIER GetResourceTransition(D3D12_RESOURCE_STATES prev) const override
-	{
-		return CD3DX12_RESOURCE_BARRIER::Transition(*Resource, prev, State);
-	}
-
-private:
 	SharedPtr<T>& Resource;
-	bool IsLinked = false;
+	D3D12_RESOURCE_STATES Previous{};
+	D3D12_RESOURCE_STATES Next{};
 };
 
-class PassOutputBase
+struct GlobalRenderPassResources
 {
 public:
-	virtual ~PassOutputBase() = default;
-
-	const std::string& GetName() const noexcept { return Name; }
-	inline const D3D12_RESOURCE_STATES GetResourceState() const { return State; }
-	virtual void Validate() const = 0;
-
-protected:
-	PassOutputBase(std::string&& name, D3D12_RESOURCE_STATES state);
-
-protected:
-	D3D12_RESOURCE_STATES State;
+	virtual ~GlobalRenderPassResources() = default;
+	void Bind(ID3D12GraphicsCommandList4Ptr cmdList);
+	virtual void Setup(ID3D12Device5Ptr device);
 
 private:
-	std::string Name;
-};
+	void BindDescriptorHeap(ID3D12GraphicsCommandList4Ptr cmdList, ID3D12DescriptorHeapPtr heap);
 
-template<ResourceType T>
-class PassOutput : public PassOutputBase
-{
 public:
-	PassOutput(std::string&& name, SharedPtr<T>& resource, D3D12_RESOURCE_STATES state)
-		:PassOutputBase(std::move(name), state), Resource(resource)
-	{}
-
-	virtual void Validate() const override {}
-
-	SharedPtr<T> GetResource() const
-	{
-		if (IsLinked)
-			throw std::runtime_error("Resource " + GetName() + " bound twice");
-
-		IsLinked = true;
-		return Resource;
-	}
-
-private:
-	SharedPtr<T>& Resource;
-	mutable bool IsLinked = false;
+	std::vector<ID3D12DescriptorHeapPtr> Heaps;
 };
-
-template<ResourceType T>
-void PassInput<T>::Bind(PassOutputBase& out)
-{
-	if (auto* outPtr = dynamic_cast<PassOutput<T>*>(&out))
-	{
-		*Resource = *(outPtr->GetResource());
-		IsLinked = true;
-	}
-	else
-		throw std::bad_cast();
-}

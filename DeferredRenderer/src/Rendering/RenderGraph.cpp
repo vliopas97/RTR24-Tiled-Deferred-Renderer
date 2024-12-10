@@ -1,11 +1,12 @@
 #include "RenderGraph.h"
 #include "Core/Exception.h"
 #include "Rendering/Utils.h"
+#include "Scene.h"
 
 #include <optional>
 
 auto createResourceTransition = [](const PassInputBase& input, const PassOutputBase& output)
--> std::optional<D3D12_RESOURCE_BARRIER>
+-> std::optional<UniquePtr<TransitionBase>>
 	{
 		if (input.GetResourceState() != output.GetResourceState())
 		{
@@ -55,27 +56,30 @@ void RenderGraph::SetInputTarget(const std::string & name, const std::string & t
 	(*it)->SetTarget(split[0], split[1]);
 }
 
-void RenderGraph::Execute(ID3D12GraphicsCommandList4Ptr cmdList)
+void RenderGraph::Execute(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene)
 {
 	ASSERT(IsValidated, "Validation hasn't happened");
 
 	auto i = 0;
 	for (const auto& pass : Passes)
 	{
-		//Globals.CmdAllocator->Reset();
-		//cmdList->Reset(Globals.CmdAllocator, pass->GetPSO());// will only work for one pass FIX IT
-		//cmdList->ResourceBarrier(Transitions[i].size(), Transitions[i].data());
+		Globals.CmdAllocator->Reset();
+		cmdList->Reset(Globals.CmdAllocator, pass->GetPSO());// will only work for one pass FIX IT
+		for (auto& t : Transitions[i]) t->Apply(cmdList);// Barriers
 		pass->Bind(cmdList);
-		//Globals.FenceValue = D3D::SubmitCommandList(cmdList, Globals.CmdQueue, Globals.Fence, Globals.FenceValue);
-		i++;
-	}
+		scene.Bind(cmdList);
 
-	//cmdList->ResourceBarrier(Transitions[i].size(), Transitions[i].data());
+		i++;
+		if (i == Passes.size())
+			for (auto& t : Transitions[i]) t->Apply(cmdList); // Final layer of transitions (Transitions.size() = Passes.size() + 1)
+
+		Globals.FenceValue = D3D::SubmitCommandList(cmdList, Globals.CmdQueue, Globals.Fence, Globals.FenceValue);
+	}
 }
 
 void RenderGraph::LinkInputs(RenderPass& renderPass)
 {
-	std::vector<D3D12_RESOURCE_BARRIER> passTransitions;
+	std::vector<UniquePtr<TransitionBase>> passTransitions;
 
 	for (auto& in : renderPass.GetInputs())
 	{
@@ -93,7 +97,7 @@ void RenderGraph::LinkInputs(RenderPass& renderPass)
 
 					// TRANSITION
 					if (auto transition = createResourceTransition(*in, *out))
-						passTransitions.emplace_back(*transition);
+						passTransitions.emplace_back(std::move(*transition));
 
 					break;
 				}
@@ -117,7 +121,7 @@ void RenderGraph::LinkInputs(RenderPass& renderPass)
 
 			// TRANSITION
 			if (auto transition = createResourceTransition(*in, out))
-				passTransitions.emplace_back(*transition);
+				passTransitions.emplace_back(std::move(*transition));
 		}
 	}
 
@@ -126,7 +130,7 @@ void RenderGraph::LinkInputs(RenderPass& renderPass)
 
 void RenderGraph::LinkGlobalInputs()
 {
-	std::vector<D3D12_RESOURCE_BARRIER> passTransitions;
+	std::vector<UniquePtr<TransitionBase>> passTransitions;
 
 	for (auto& in : GraphOutputs)
 	{
@@ -144,7 +148,7 @@ void RenderGraph::LinkGlobalInputs()
 
 		// TRANSITIONS
 		if (auto transition = createResourceTransition(*in, out))
-			passTransitions.emplace_back(*transition);
+			passTransitions.emplace_back(std::move(*transition));
 	}
 
 	Transitions.emplace_back(std::move(passTransitions));

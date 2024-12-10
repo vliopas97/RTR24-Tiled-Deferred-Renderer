@@ -3,6 +3,43 @@
 #include "Shader.h"
 #include "Utils.h"
 
+#include <algorithm>
+
+static auto isValidName = [](const std::string& name)
+	{
+		return !name.empty() &&
+			std::ranges::all_of(name, [](char c) { return std::isalnum(c) || c == '_'; }) &&
+			!std::isdigit(name.front());
+	};
+
+PassInputBase::PassInputBase(std::string&& name, D3D12_RESOURCE_STATES state)
+	: Name(std::move(name)), State(state)
+{
+	if (Name.empty())
+		throw std::invalid_argument("Invalid name - Empty pass name");
+
+	if (!isValidName(Name))
+		throw std::invalid_argument("Invalid name - unsupported characters");
+}
+
+PassOutputBase::PassOutputBase(std::string&& name, D3D12_RESOURCE_STATES state)
+	:Name(std::move(name)), State(state)
+{}
+
+
+void PassInputBase::SetTarget(std::string passName, std::string outputName)
+{
+	if (passName.empty())
+		throw std::invalid_argument("Empty pass name");
+	if (passName != "$" && !isValidName(passName))
+		throw std::invalid_argument("Invalid pass name - unsupported characters");
+	if (!isValidName(outputName))
+		throw std::invalid_argument("Invalid output name - unsupported characters");
+
+	PassName = std::move(passName);
+	OutputName = std::move(outputName);
+}
+
 RenderPass::RenderPass(std::string&& name)
 	:Name(name), RTVBuffer(MakeShared<ID3D12ResourcePtr>()), DSVBuffer(MakeShared<ID3D12ResourcePtr>())
 {}

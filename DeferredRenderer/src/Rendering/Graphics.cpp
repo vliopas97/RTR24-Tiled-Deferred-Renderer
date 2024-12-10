@@ -64,9 +64,7 @@ void Graphics::Tick(float delta)
 	Graph.Tick();
 	MainScene->Tick();
 
-	ResetCommandList();
-	PopulateCommandList(frameIndex);
-	//ImGui->End(CmdList);
+	Graph.Execute(CmdList, *MainScene);
 
 	EndFrame(frameIndex);
 }
@@ -171,33 +169,6 @@ void Graphics::Shutdown()
 	ImGui.reset();
 }
 
-void Graphics::PopulateCommandList(UINT frameIndex)
-{
-	D3D::ResourceBarrier(CmdList,
-						 FrameObjects[frameIndex].SwapChainBuffer,
-						 D3D12_RESOURCE_STATE_PRESENT,
-						 D3D12_RESOURCE_STATE_RENDER_TARGET);
-
-	// RENEW RTV, DSV in Graph - Set them as data members and update per frame from Globals
-
-	//FRPass.Bind(CmdList);
-	Graph.Execute(CmdList);
-
-	//D3D12_VIEWPORT viewport = { 0.0f, 0.0f, (FLOAT)SwapChainSize.x, (FLOAT)SwapChainSize.y, 0.0f, 1.0f };
-	//CmdList->RSSetViewports(1, &viewport);
-
-	//// Set scissor rect
-	//D3D12_RECT scissorRect = { 0, 0, SwapChainSize.x, SwapChainSize.y };
-	//CmdList->RSSetScissorRects(1, &scissorRect);
-
-	//CmdList->OMSetRenderTargets(1, &FrameObjects[frameIndex].RTVHandle, FALSE, &FrameObjects[frameIndex].DSVHandle);
-	//const float clearColor[4] = { 0.4f, 0.6f, 0.2f, 1.0f };
-	//CmdList->ClearRenderTargetView(FrameObjects[frameIndex].RTVHandle, clearColor, 0, nullptr);
-	//CmdList->ClearDepthStencilView(FrameObjects[frameIndex].DSVHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0.0f, 0, nullptr);
-
-	MainScene->Bind(CmdList);
-}
-
 void Graphics::CreateDevice()
 {
 	IDXGIAdapter1Ptr adapter;
@@ -245,13 +216,6 @@ void Graphics::ResetCommandList()
 
 void Graphics::EndFrame(UINT frameIndex)
 {
-	D3D::ResourceBarrier(CmdList,
-						 FrameObjects[frameIndex].SwapChainBuffer,
-						 D3D12_RESOURCE_STATE_RENDER_TARGET,
-						 D3D12_RESOURCE_STATE_PRESENT);
-
-	FenceValue = D3D::SubmitCommandList(CmdList, CmdQueue, Fence, FenceValue);
-
 	SwapChain->Present(1, 0);
 
 	if (FenceValue > DefaultSwapChainBuffers)
