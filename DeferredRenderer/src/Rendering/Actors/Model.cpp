@@ -38,7 +38,7 @@ Model::Model(ID3D12Device5Ptr device,
 
 	aiString filename;
 	auto& material = materials[mesh.mMaterialIndex];
-	auto& data = ActorInfo.CPUData;
+	auto& data = ActorInfo->Resource.CPUData;
 
 	material->GetTexture(aiTextureType_DIFFUSE, 0, &filename);
 	data.KdID = findTextureIndex(filename);

@@ -10,30 +10,24 @@ Actor::Actor(ID3D12Device5Ptr device, const Camera& camera)
     Rotation(0.0f, 0.0f, 0.0f),
     Scale(1.0f, 1.0f, 1.0f)
 {
-    ActorInfo.CPUData.Material.MatericalColor = glm::vec3(1.0f, 1.0f, 1.0f);
-    ActorInfo.CPUData.Material.SpecularIntensity = 1.0f;
-    ActorInfo.CPUData.Material.Shininess = 12.0f;
-}
+    ActorInfo = MakeUnique<LocalRenderPass_CBV<ActorData>>(LightCBuffer + 1);
+    ActorInfo->Resource.CPUData.Material.MatericalColor = glm::vec3(1.0f, 1.0f, 1.0f);
+    ActorInfo->Resource.CPUData.Material.SpecularIntensity = 1.0f;
+    ActorInfo->Resource.CPUData.Material.Shininess = 12.0f;
 
-void Actor::Bind(ID3D12GraphicsCommandList4Ptr cmdList) const
-{
-	cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	cmdList->IASetVertexBuffers(0, 1, &VBuffer.GetView());
-	cmdList->IASetIndexBuffer(&IBuffer.GetView());
-    cmdList->SetGraphicsRootConstantBufferView(LightCBuffer + 1, ActorInfo.GetGPUVirtualAddress());
-	cmdList->DrawIndexedInstanced(IBuffer.GetIndexCount(), 1, 0, 0, 0);
+    AddResourceToMap<ForwardRenderPass>(*ActorInfo);
 }
 
 void Actor::Tick()
 {
-    ActorInfo.CPUData.Model = glm::translate(Position) * glm::mat4_cast(glm::quat(glm::radians(Rotation))) * glm::scale(Scale);
-    ActorInfo.CPUData.ModelView = SceneCamera.GetView() * ActorInfo.CPUData.Model;
-    ActorInfo.Tick();
+    ActorInfo->Resource.CPUData.Model = glm::translate(Position) * glm::mat4_cast(glm::quat(glm::radians(Rotation))) * glm::scale(Scale);
+    ActorInfo->Resource.CPUData.ModelView = SceneCamera.GetView() * ActorInfo->Resource.CPUData.Model;
+    ActorInfo->Resource.Tick();
 }
 
 void Actor::SetUpGPUResources(ID3D12Device5Ptr device, D3D12_CPU_DESCRIPTOR_HANDLE destDescriptor)
 {
-    ActorInfo.Init(device, destDescriptor);
+    ActorInfo->Resource.Init(device, destDescriptor);
 }
 
 Cube::Cube(ID3D12Device5Ptr device, const Camera& camera)

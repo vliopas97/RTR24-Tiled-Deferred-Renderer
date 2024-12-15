@@ -67,8 +67,9 @@ void RenderGraph::Execute(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& sc
 		cmdList->Reset(Globals.CmdAllocator, pass->GetPSO());// will only work for one pass FIX IT
 		for (auto& t : Transitions[i]) t->Apply(cmdList);// Barriers
 		pass->Bind(cmdList);
-		scene.Bind(cmdList);
 
+		BindScene(cmdList, scene, pass.get());
+		
 		i++;
 		if (i == Passes.size())
 			for (auto& t : Transitions[i]) t->Apply(cmdList); // Final layer of transitions (Transitions.size() = Passes.size() + 1)
@@ -172,4 +173,15 @@ void RenderGraph::AddGlobalInputs(UniquePtr<PassInputBase> in)
 void RenderGraph::AddGlobalOutputs(UniquePtr<PassOutputBase> out)
 {
 	GraphInputs.emplace_back(std::move(out));
+}
+
+void RenderGraph::BindScene(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene, RenderPass* pass)
+{
+	if (auto forwardPass = dynamic_cast<ForwardRenderPass*>(pass))
+	{
+		scene.Bind<ForwardRenderPass>(cmdList);
+	}
+	else
+		ASSERT(false, "No suitable conversion found for that RenderPass type. Cannot call Scene::Bind()");
+
 }

@@ -41,6 +41,7 @@ private:
 	void AddGlobalInputs(UniquePtr<PassInputBase> in);
 	void AddGlobalOutputs(UniquePtr<PassOutputBase> out);
 
+	static void BindScene(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene, RenderPass* pass);
 private:
 	using Transitions2DArray = std::vector<std::vector<UniquePtr<TransitionBase>>>;
 	std::vector<UniquePtr<PassInputBase>> GraphOutputs;

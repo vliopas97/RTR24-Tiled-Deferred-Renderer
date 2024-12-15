@@ -18,12 +18,6 @@ Scene::Scene(ID3D12Device5Ptr device, const Camera& camera)
 	Lights.emplace_back(DirectionalLight{});
 }
 
-void Scene::Bind(ID3D12GraphicsCommandList4Ptr cmdList) const
-{
-	for (const auto& actor : Actors)
-		actor.Bind(cmdList);
-}
-
 void Scene::Tick()
 {
 	for (auto& actor : Actors)

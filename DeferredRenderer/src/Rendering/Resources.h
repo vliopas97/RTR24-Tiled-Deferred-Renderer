@@ -5,6 +5,38 @@
 
 #include <type_traits>
 
+class RenderPass;
+
+// Concepts
+
+template <typename T>
+inline constexpr bool is_com_ptr_v = false;
+
+template <typename T>
+inline constexpr bool is_com_ptr_v<_com_ptr_t<T>> = true;
+
+template <typename T>
+concept ResourceType = is_com_ptr_v<T>;
+
+template <typename T>
+concept HasGetGPUVirtualAddress =
+	requires(T t) { { t->GetGPUVirtualAddress() } -> std::convertible_to<uint64_t>; } ||
+	requires(T t) { { t.GetGPUVirtualAddress() } -> std::convertible_to<uint64_t>; };
+
+template < template <typename...> class base, typename derived>
+struct is_base_of_template_impl
+{
+	template<typename... Ts>
+	static constexpr std::true_type  test(const base<Ts...>*);
+	static constexpr std::false_type test(...);
+	using type = decltype(test(std::declval<derived*>()));
+};
+
+template < template <typename...> class base, typename derived>
+using is_base_of_template = typename is_base_of_template_impl<base, derived>::type;
+
+// Concepts End
+
 struct GlobalResources
 {
 	ID3D12DescriptorHeapPtr SRVHeap{};
@@ -40,15 +72,6 @@ namespace GlobalResManager
 	void SetCmdAllocator(ID3D12CommandAllocatorPtr cmdAllocator);
 }
 
-template <typename T>
-inline constexpr bool is_com_ptr_v = false;
-
-template <typename T>
-inline constexpr bool is_com_ptr_v<_com_ptr_t<T>> = true;
-
-template <typename T>
-concept ResourceType = is_com_ptr_v<T>;
-
 struct TransitionBase
 {
 	virtual ~TransitionBase() = default;
@@ -75,6 +98,48 @@ struct Transition : public TransitionBase
 	D3D12_RESOURCE_STATES Previous{};
 	D3D12_RESOURCE_STATES Next{};
 };
+
+// To be used by actors to bind non-global variables to PSOs of the appropriate Render Pass
+struct LocalRenderPassBase
+{
+	virtual ~LocalRenderPassBase() = default;
+	virtual void Bind(ID3D12GraphicsCommandList4Ptr cmdList) const = 0;
+};
+
+template<typename T>
+requires HasGetGPUVirtualAddress<T>
+struct LocalRenderPassResources : public LocalRenderPassBase
+{
+	LocalRenderPassResources() = default;
+	LocalRenderPassResources(UINT slot)
+		:Resource(), Slot(slot)
+	{}
+
+	uint64_t GetGPUVirtualAddress() const
+	{
+		if constexpr (std::is_pointer_v<T> || is_com_ptr_v<T>)
+			return Resource->GetGPUVirtualAddress();
+		else
+			return Resource.GetGPUVirtualAddress();
+	}
+
+	T Resource;
+	UINT Slot;
+};
+
+template<typename T>
+requires is_base_of_template<ConstantBuffer, T>::value
+struct LocalRenderPassResource_CBV : public LocalRenderPassResources<T>
+{
+	using LocalRenderPassResources::LocalRenderPassResources;
+	virtual void Bind(ID3D12GraphicsCommandList4Ptr cmdList) const override
+	{
+		cmdList->SetGraphicsRootConstantBufferView(Slot, GetGPUVirtualAddress());
+	}
+};
+
+template<typename T>
+using LocalRenderPass_CBV = LocalRenderPassResource_CBV<ConstantBuffer<T>>;
 
 struct GlobalRenderPassResources
 {
