@@ -24,11 +24,22 @@ void RenderGraph::Init(ID3D12Device5Ptr device)
 	GraphInputs.emplace_back(MakeUnique<PassOutput<ID3D12ResourcePtr>>("depthBuffer", DSVBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE));
 	GraphOutputs.emplace_back(MakeUnique<PassInput<ID3D12ResourcePtr>>("renderTarget", RTVBuffer, D3D12_RESOURCE_STATE_PRESENT));
 
-	auto forwardPass = MakeUnique<ForwardRenderPass>("forwardPass");
-	forwardPass->Init(device);
-	forwardPass->SetInput("renderTarget", "$.renderTarget");
-	forwardPass->SetInput("depthBuffer", "$.depthBuffer");
-	Add(forwardPass);
+	// Clear Pass
+	{
+		auto pass = MakeUnique<ClearPass>("clear");
+		pass->Init(device);
+		pass->SetInput("renderTarget", "$.renderTarget");
+		pass->SetInput("depthBuffer", "$.depthBuffer");
+		Add(pass);
+	}
+	// Forward Rendering Pass
+	{
+		auto pass = MakeUnique<ForwardRenderPass>("forwardPass");
+		pass->Init(device);
+		pass->SetInput("renderTarget", "clear.renderTarget");
+		pass->SetInput("depthBuffer", "clear.depthBuffer");
+		Add(pass);
+	}
 
 	SetInputTarget("renderTarget", "forwardPass.renderTarget");
 	Validate();
@@ -75,6 +86,11 @@ void RenderGraph::Execute(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& sc
 			for (auto& t : Transitions[i]) t->Apply(cmdList); // Final layer of transitions (Transitions.size() = Passes.size() + 1)
 
 		Globals.FenceValue = D3D::SubmitCommandList(cmdList, Globals.CmdQueue, Globals.Fence, Globals.FenceValue);
+
+		// Synchronizatio Step before calling Reset() for next iteration
+		Globals.CmdQueue->Signal(Globals.Fence, ++Globals.FenceValue);
+		Globals.Fence->SetEventOnCompletion(Globals.FenceValue, Globals.FenceEvent);
+		WaitForSingleObject(Globals.FenceEvent, INFINITE);
 	}
 }
 
@@ -180,6 +196,10 @@ void RenderGraph::BindScene(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& 
 	if (auto forwardPass = dynamic_cast<ForwardRenderPass*>(pass))
 	{
 		scene.Bind<ForwardRenderPass>(cmdList);
+	}
+	else if (auto clearPass = dynamic_cast<ClearPass*>(pass))
+	{
+		scene.Bind<ClearPass>(cmdList);
 	}
 	else
 		ASSERT(false, "No suitable conversion found for that RenderPass type. Cannot call Scene::Bind()");

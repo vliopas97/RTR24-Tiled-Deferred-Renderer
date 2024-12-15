@@ -124,7 +124,7 @@ public:
 	virtual ~RenderPass() = default;
 	
 	void Init(ID3D12Device5Ptr device);
-	void Bind(ID3D12GraphicsCommandList4Ptr cmdList);
+	virtual void Bind(ID3D12GraphicsCommandList4Ptr cmdList) const;
 
 	inline ID3D12PipelineStatePtr GetPSO() { return PipelineState; }
 	inline const std::string& GetName() const noexcept { return Name; }
@@ -138,8 +138,10 @@ public:
 	virtual void Validate();
 
 protected:
+	inline virtual void InitResources(ID3D12Device5Ptr device) { Resources.Setup(device); }
 	virtual void InitRootSignature() = 0;
 	virtual void InitPipelineState() = 0;
+	virtual void BindImpl(ID3D12GraphicsCommandList4Ptr cmdList) const {};
 
 	void Register(UniquePtr<PassInputBase> input);
 	void Register(UniquePtr<PassOutputBase> output);
@@ -176,3 +178,13 @@ protected:
 	void InitPipelineState() override;
 };
 
+class ClearPass final : public RenderPass
+{
+public:
+	ClearPass(std::string&& name);
+	void Bind(ID3D12GraphicsCommandList4Ptr cmdList) const override;
+protected:
+	inline void InitResources(ID3D12Device5Ptr device) override {}
+	void InitRootSignature() override {}
+	void InitPipelineState() override {}
+};

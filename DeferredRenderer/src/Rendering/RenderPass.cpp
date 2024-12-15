@@ -47,16 +47,15 @@ RenderPass::RenderPass(std::string&& name)
 void RenderPass::Init(ID3D12Device5Ptr device)
 {
 	Device = device;
-	Resources.Setup(Device);
+	InitResources(device);
 	InitRootSignature();
 	InitPipelineState();
 }
 
-void RenderPass::Bind(ID3D12GraphicsCommandList4Ptr cmdList)
+void RenderPass::Bind(ID3D12GraphicsCommandList4Ptr cmdList) const
 {
 	//RootSignatureData
 	cmdList->SetGraphicsRootSignature(RootSignatureData.RootSignaturePtr.GetInterfacePtr());
-	Resources.Bind(cmdList);
 
 	D3D12_VIEWPORT viewport = { 0.0f, 0.0f, (FLOAT)Globals.WindowDimensions.x, (FLOAT)Globals.WindowDimensions.y, 0.0f, 1.0f };
 	cmdList->RSSetViewports(1, &viewport);
@@ -66,9 +65,7 @@ void RenderPass::Bind(ID3D12GraphicsCommandList4Ptr cmdList)
 	cmdList->RSSetScissorRects(1, &scissorRect);
 	cmdList->OMSetRenderTargets(1, &Globals.RTVHandle, FALSE, &Globals.DSVHandle);
 
-	const float clearColor[4] = { 0.4f, 0.6f, 0.2f, 1.0f };
-	cmdList->ClearRenderTargetView(Globals.RTVHandle, clearColor, 0, nullptr);
-	cmdList->ClearDepthStencilView(Globals.DSVHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0.0f, 0, nullptr);
+	Resources.Bind(cmdList);
 }
 
 PassInputBase& RenderPass::GetInput(const std::string& name) const
@@ -209,4 +206,23 @@ void ForwardRenderPass::InitPipelineState()
 	psoDesc.SampleDesc.Count = 1;
 
 	GRAPHICS_ASSERT(Device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&PipelineState)));
+}
+
+ClearPass::ClearPass(std::string&& name)
+	:RenderPass(std::move(name))
+{
+	Register<PassInput<ID3D12ResourcePtr>>("renderTarget", RTVBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	Register<PassInput<ID3D12ResourcePtr>>("depthBuffer", DSVBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+	Register<PassOutput<ID3D12ResourcePtr>>("renderTarget", RTVBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	Register<PassOutput<ID3D12ResourcePtr>>("depthBuffer", DSVBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+}
+
+void ClearPass::Bind(ID3D12GraphicsCommandList4Ptr cmdList) const
+{
+	RenderPass::Bind(cmdList);
+
+	const float clearColor[4] = { 0.4f, 0.6f, 0.2f, 1.0f };
+	cmdList->ClearRenderTargetView(Globals.RTVHandle, clearColor, 0, nullptr);
+	cmdList->ClearDepthStencilView(Globals.DSVHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0.0f, 0, nullptr);
+
 }

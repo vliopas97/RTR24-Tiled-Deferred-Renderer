@@ -145,11 +145,11 @@ struct GlobalRenderPassResources
 {
 public:
 	virtual ~GlobalRenderPassResources() = default;
-	void Bind(ID3D12GraphicsCommandList4Ptr cmdList);
+	void Bind(ID3D12GraphicsCommandList4Ptr cmdList) const;
 	virtual void Setup(ID3D12Device5Ptr device);
 
 private:
-	void BindDescriptorHeap(ID3D12GraphicsCommandList4Ptr cmdList, ID3D12DescriptorHeapPtr heap);
+	void BindDescriptorHeap(ID3D12GraphicsCommandList4Ptr cmdList, ID3D12DescriptorHeapPtr heap) const;
 
 public:
 	std::vector<ID3D12DescriptorHeapPtr> Heaps;

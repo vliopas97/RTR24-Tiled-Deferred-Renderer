@@ -98,6 +98,10 @@ inline void Actor::Bind<ForwardRenderPass>(ID3D12GraphicsCommandList4Ptr cmdList
 	cmdList->DrawIndexedInstanced(IBuffer.GetIndexCount(), 1, 0, 0, 0);
 }
 
+template<>
+inline void Actor::Bind<ClearPass>(ID3D12GraphicsCommandList4Ptr cmdList) const
+{}
+
 class Cube : public Actor
 {
 public:
