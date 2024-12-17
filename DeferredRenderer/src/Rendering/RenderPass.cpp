@@ -1,5 +1,6 @@
 #include "RenderPass.h"
 #include "Core/Exception.h"
+#include "Scene.h"
 #include "Shader.h"
 #include "Utils.h"
 
@@ -137,6 +138,12 @@ ForwardRenderPass::ForwardRenderPass(std::string&& name)
 	Register<PassOutput<ID3D12ResourcePtr>>("renderTarget", RTVBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
 }
 
+void ForwardRenderPass::Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene)
+{
+	Bind(cmdList);
+	scene.Bind<ForwardRenderPass>(cmdList);
+}
+
 void ForwardRenderPass::InitRootSignature()
 {
 	std::vector<D3D12_DESCRIPTOR_RANGE> srvRanges;
@@ -217,6 +224,12 @@ ClearPass::ClearPass(std::string&& name)
 	Register<PassOutput<ID3D12ResourcePtr>>("depthBuffer", DSVBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 }
 
+void ClearPass::Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene)
+{
+	Bind(cmdList);
+	scene.Bind<ClearPass>(cmdList);
+}
+
 void ClearPass::Bind(ID3D12GraphicsCommandList4Ptr cmdList) const
 {
 	RenderPass::Bind(cmdList);
@@ -225,4 +238,16 @@ void ClearPass::Bind(ID3D12GraphicsCommandList4Ptr cmdList) const
 	cmdList->ClearRenderTargetView(Globals.RTVHandle, clearColor, 0, nullptr);
 	cmdList->ClearDepthStencilView(Globals.DSVHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0.0f, 0, nullptr);
 
+}
+
+GUIPass::GUIPass(std::string&& name, ImGuiLayer& layer)
+	:RenderPass(std::move(name)), Layer(layer)
+{}
+
+void GUIPass::Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene & scene)
+{
+	Layer.Begin();
+	Bind(cmdList);
+	scene.Bind<GUIPass>(cmdList);
+	Layer.End(cmdList);
 }

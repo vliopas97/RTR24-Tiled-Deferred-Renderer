@@ -2,12 +2,12 @@
 #include "Core/Core.h"
 #include "Resources.h"
 #include "RenderPass.h"
+#include "Core/Layer.h"
 
 class RenderGraph
 {
 public:
-	RenderGraph() = default;
-	void Init(ID3D12Device5Ptr device);
+	RenderGraph(ID3D12Device5Ptr device, ImGuiLayer& layer);
 	~RenderGraph() = default;
 
 	void Execute(ID3D12GraphicsCommandList4Ptr cmdList, const class Scene& scene);
@@ -41,7 +41,6 @@ private:
 	void AddGlobalInputs(UniquePtr<PassInputBase> in);
 	void AddGlobalOutputs(UniquePtr<PassOutputBase> out);
 
-	static void BindScene(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene, RenderPass* pass);
 private:
 	using Transitions2DArray = std::vector<std::vector<UniquePtr<TransitionBase>>>;
 	std::vector<UniquePtr<PassInputBase>> GraphOutputs;

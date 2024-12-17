@@ -31,14 +31,13 @@ private:
     void InitGlobals();
     void InitScene();
 	void Shutdown();
-	void PopulateCommandList(UINT frameIndex);
 
 	void CreateDevice();
 	void CreateSwapChain();
 
     void CreateShaderResources();
 
-    void ResetCommandList();
+    void UpdateGlobals(UINT frameIndex, float delta);
     void EndFrame(UINT frameIndex);
 
 private:
@@ -51,17 +50,10 @@ private:
 	IDXGISwapChain3Ptr SwapChain;
     glm::uvec2 SwapChainSize;
 
-	//ID3D12CommandQueuePtr CmdQueue;
     ID3D12GraphicsCommandList4Ptr CmdList;
 
-    //ForwardRenderPass FRPass;
-    RenderGraph Graph;
-    
+    UniquePtr<RenderGraph> Graph;
     UniquePtr<Scene> MainScene;
-
-    //ID3D12FencePtr Fence;
-    //HANDLE FenceEvent;
-    //uint64_t FenceValue = 0;
 
     struct
     {

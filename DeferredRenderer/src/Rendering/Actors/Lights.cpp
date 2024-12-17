@@ -13,7 +13,7 @@ void DirectionalLight::Bind(ID3D12GraphicsCommandList4Ptr cmdList) const
 	//cmdList->SetGraphicsRootConstantBufferView(LightCBuffer + 1, Info.GetGPUVirtualAddress());// ATTENTION WITH THE SLOT!!!!
 }
 
-void DirectionalLight::GUI()
+void DirectionalLight::GUI() const
 {
 	ImGui::Begin("Light Properties");
 	auto& x = Position.x;

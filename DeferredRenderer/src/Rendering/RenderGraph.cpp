@@ -15,7 +15,7 @@ auto createResourceTransition = [](const PassInputBase& input, const PassOutputB
 		return std::nullopt;
 	};
 
-void RenderGraph::Init(ID3D12Device5Ptr device)
+RenderGraph::RenderGraph(ID3D12Device5Ptr device, ImGuiLayer& layer)
 {
 	RTVBuffer = MakeShared<ID3D12ResourcePtr>(Globals.RTVBuffer);
 	DSVBuffer = MakeShared<ID3D12ResourcePtr>(Globals.DSVBuffer);
@@ -38,6 +38,12 @@ void RenderGraph::Init(ID3D12Device5Ptr device)
 		pass->Init(device);
 		pass->SetInput("renderTarget", "clear.renderTarget");
 		pass->SetInput("depthBuffer", "clear.depthBuffer");
+		Add(pass);
+	}
+	// GUI layer
+	{
+		auto pass = MakeUnique<GUIPass>("GUI", layer);
+		pass->Init(device);
 		Add(pass);
 	}
 
@@ -75,20 +81,17 @@ void RenderGraph::Execute(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& sc
 	for (const auto& pass : Passes)
 	{
 		Globals.CmdAllocator->Reset();
-		cmdList->Reset(Globals.CmdAllocator, pass->GetPSO());// will only work for one pass FIX IT
-		for (auto& t : Transitions[i]) t->Apply(cmdList);// Barriers
-		pass->Bind(cmdList);
+		cmdList->Reset(Globals.CmdAllocator, pass->GetPSO());
 
-		BindScene(cmdList, scene, pass.get());
+		for (auto& t : Transitions[i]) t->Apply(cmdList);// Barriers
 		
-		i++;
-		if (i == Passes.size())
+		pass->Submit(cmdList, scene);
+		
+		if (++i == Passes.size())
 			for (auto& t : Transitions[i]) t->Apply(cmdList); // Final layer of transitions (Transitions.size() = Passes.size() + 1)
 
+		// Submit Render Pass for execution and synchronize before calling Reset() for next iteration
 		Globals.FenceValue = D3D::SubmitCommandList(cmdList, Globals.CmdQueue, Globals.Fence, Globals.FenceValue);
-
-		// Synchronizatio Step before calling Reset() for next iteration
-		Globals.CmdQueue->Signal(Globals.Fence, ++Globals.FenceValue);
 		Globals.Fence->SetEventOnCompletion(Globals.FenceValue, Globals.FenceEvent);
 		WaitForSingleObject(Globals.FenceEvent, INFINITE);
 	}
@@ -189,19 +192,4 @@ void RenderGraph::AddGlobalInputs(UniquePtr<PassInputBase> in)
 void RenderGraph::AddGlobalOutputs(UniquePtr<PassOutputBase> out)
 {
 	GraphInputs.emplace_back(std::move(out));
-}
-
-void RenderGraph::BindScene(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene, RenderPass* pass)
-{
-	if (auto forwardPass = dynamic_cast<ForwardRenderPass*>(pass))
-	{
-		scene.Bind<ForwardRenderPass>(cmdList);
-	}
-	else if (auto clearPass = dynamic_cast<ClearPass*>(pass))
-	{
-		scene.Bind<ClearPass>(cmdList);
-	}
-	else
-		ASSERT(false, "No suitable conversion found for that RenderPass type. Cannot call Scene::Bind()");
-
 }

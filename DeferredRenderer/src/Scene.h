@@ -41,3 +41,10 @@ private:
 	std::string FilesLocation;
 };
 
+template<>
+inline void Scene::Bind<GUIPass>(ID3D12GraphicsCommandList4Ptr cmdList) const
+{
+	for (auto& light : Lights)
+		light.GUI();
+}
+

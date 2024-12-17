@@ -28,11 +28,10 @@ Graphics::Graphics(Window& window)
 {
 	Init();
 	InitGlobals();
-	//FRPass.Init(Device);
 
 	ImGui->OnAttach(Device);
 	InitScene();
-	Graph.Init(Device);
+	Graph = MakeUnique<RenderGraph>(Device, *ImGui);
 }
 
 Graphics::~Graphics()
@@ -44,27 +43,16 @@ void Graphics::Tick(float delta)
 {
 	uint32_t frameIndex = SwapChain->GetCurrentBackBufferIndex();
 
-	//ImGui->Begin();
-
 	// Update Pipeline Constants
 	CmdQueue->Signal(Fence, ++FenceValue);
 	Fence->SetEventOnCompletion(FenceValue, FenceEvent);
 	WaitForSingleObject(FenceEvent, INFINITE);
 
-	SceneCamera.Tick(delta);
-	CBGlobalConstants.CPUData.CameraPosition = SceneCamera.GetPosition();
-	CBGlobalConstants.CPUData.View = SceneCamera.GetView();
-	CBGlobalConstants.CPUData.ViewProjection = SceneCamera.GetViewProjection();
-
-	GlobalResManager::SetRTV(FrameObjects[frameIndex].SwapChainBuffer, FrameObjects[frameIndex].RTVHandle);
-	GlobalResManager::SetDSV(FrameObjects[frameIndex].DepthStencilBuffer, FrameObjects[frameIndex].DSVHandle);
-	GlobalResManager::SetCmdAllocator(FrameObjects[frameIndex].CmdAllocator);
+	UpdateGlobals(frameIndex, delta);
 	
-	CBGlobalConstants.Tick();
-	Graph.Tick();
+	Graph->Tick();
 	MainScene->Tick();
-
-	Graph.Execute(CmdList, *MainScene);
+	Graph->Execute(CmdList, *MainScene);
 
 	EndFrame(frameIndex);
 }
@@ -208,10 +196,17 @@ void Graphics::CreateShaderResources()
 	MainScene->CreateShaderResources(Device, CmdQueue);
 }
 
-void Graphics::ResetCommandList()
+inline void Graphics::UpdateGlobals(UINT frameIndex, float delta)
 {
-	GetCommandAllocator()->Reset();
-	CmdList->Reset(GetCommandAllocator(), Graph.Passes[0]->GetPSO());
+	SceneCamera.Tick(delta);
+	CBGlobalConstants.CPUData.CameraPosition = SceneCamera.GetPosition();
+	CBGlobalConstants.CPUData.View = SceneCamera.GetView();
+	CBGlobalConstants.CPUData.ViewProjection = SceneCamera.GetViewProjection();
+
+	GlobalResManager::SetRTV(FrameObjects[frameIndex].SwapChainBuffer, FrameObjects[frameIndex].RTVHandle);
+	GlobalResManager::SetDSV(FrameObjects[frameIndex].DepthStencilBuffer, FrameObjects[frameIndex].DSVHandle);
+	GlobalResManager::SetCmdAllocator(FrameObjects[frameIndex].CmdAllocator);
+	CBGlobalConstants.Tick();
 }
 
 void Graphics::EndFrame(UINT frameIndex)

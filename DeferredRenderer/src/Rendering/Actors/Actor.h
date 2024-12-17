@@ -84,9 +84,7 @@ protected:
 template<typename Pass>
 requires std::is_base_of_v<RenderPass, Pass>
 void Actor::Bind(ID3D12GraphicsCommandList4Ptr cmdList) const
-{
-	ASSERT(false, "No appropriate Binding Scheme for this type of Render Pass");
-}
+{}
 
 template<>
 inline void Actor::Bind<ForwardRenderPass>(ID3D12GraphicsCommandList4Ptr cmdList) const
@@ -97,10 +95,6 @@ inline void Actor::Bind<ForwardRenderPass>(ID3D12GraphicsCommandList4Ptr cmdList
 	BindLocalResources<ForwardRenderPass>(cmdList);
 	cmdList->DrawIndexedInstanced(IBuffer.GetIndexCount(), 1, 0, 0, 0);
 }
-
-template<>
-inline void Actor::Bind<ClearPass>(ID3D12GraphicsCommandList4Ptr cmdList) const
-{}
 
 class Cube : public Actor
 {

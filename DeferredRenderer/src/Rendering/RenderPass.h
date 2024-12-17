@@ -1,10 +1,12 @@
 #pragma once
 
 #include "Core/Core.h"
+#include "Core/Layer.h"
 #include "Rendering/RootSignature.h"
 #include "Rendering/Resources.h"
 
 class PassOutputBase;
+class Scene;
 
 class PassInputBase
 {
@@ -124,7 +126,8 @@ public:
 	virtual ~RenderPass() = default;
 	
 	void Init(ID3D12Device5Ptr device);
-	virtual void Bind(ID3D12GraphicsCommandList4Ptr cmdList) const;
+	// Submit Render Pass commands to cmdList - Does not include cmdList execution
+	virtual void Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene) = 0;
 
 	inline ID3D12PipelineStatePtr GetPSO() { return PipelineState; }
 	inline const std::string& GetName() const noexcept { return Name; }
@@ -138,10 +141,10 @@ public:
 	virtual void Validate();
 
 protected:
+	virtual void Bind(ID3D12GraphicsCommandList4Ptr cmdList) const;
 	inline virtual void InitResources(ID3D12Device5Ptr device) { Resources.Setup(device); }
 	virtual void InitRootSignature() = 0;
 	virtual void InitPipelineState() = 0;
-	virtual void BindImpl(ID3D12GraphicsCommandList4Ptr cmdList) const {};
 
 	void Register(UniquePtr<PassInputBase> input);
 	void Register(UniquePtr<PassOutputBase> output);
@@ -173,6 +176,7 @@ class ForwardRenderPass final : public RenderPass
 {
 public:
 	ForwardRenderPass(std::string&& name);
+	void Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene) override;
 protected:
 	void InitRootSignature() override;
 	void InitPipelineState() override;
@@ -182,9 +186,23 @@ class ClearPass final : public RenderPass
 {
 public:
 	ClearPass(std::string&& name);
-	void Bind(ID3D12GraphicsCommandList4Ptr cmdList) const override;
+	void Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene) override;
 protected:
+	void Bind(ID3D12GraphicsCommandList4Ptr cmdList) const override;
 	inline void InitResources(ID3D12Device5Ptr device) override {}
 	void InitRootSignature() override {}
 	void InitPipelineState() override {}
+};
+
+class GUIPass final : public RenderPass
+{
+public:
+	GUIPass(std::string&& name, ImGuiLayer& layer);
+	void Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene) override;
+protected:
+	inline void InitResources(ID3D12Device5Ptr device) {}
+	void InitRootSignature() override {}
+	void InitPipelineState() override {}
+private:
+	ImGuiLayer& Layer;
 };
