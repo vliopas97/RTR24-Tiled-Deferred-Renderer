@@ -66,8 +66,11 @@ void RenderPass::Bind(ID3D12GraphicsCommandList4Ptr cmdList) const
 	cmdList->RSSetScissorRects(1, &scissorRect);
 	cmdList->OMSetRenderTargets(1, &Globals.RTVHandle, FALSE, &Globals.DSVHandle);
 
-	Resources.Bind(cmdList);
+	Heaps.Bind(cmdList);
 }
+
+void RenderPass::InitResources(ID3D12Device5Ptr device) 
+{}
 
 PassInputBase& RenderPass::GetInput(const std::string& name) const
 {
@@ -142,6 +145,15 @@ void ForwardRenderPass::Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scen
 {
 	Bind(cmdList);
 	scene.Bind<ForwardRenderPass>(cmdList);
+}
+
+void ForwardRenderPass::InitResources(ID3D12Device5Ptr device)
+{
+	Heaps.PushBack(Globals.SRVHeap);
+	Heaps.PushBack(Globals.UAVHeap);
+	Heaps.PushBack(Globals.CBVHeap);
+	Heaps.PushBack(Globals.SamplerHeap);
+	Heaps.PushBack(Globals.LightsHeap);
 }
 
 void ForwardRenderPass::InitRootSignature()
@@ -250,4 +262,146 @@ void GUIPass::Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene & scene)
 	Bind(cmdList);
 	scene.Bind<GUIPass>(cmdList);
 	Layer.End(cmdList);
+}
+
+GeometryPass::GeometryPass(std::string&& name) : 
+	RenderPass(std::move(name)) 
+{
+	Positions = MakeShared<ID3D12ResourcePtr>();
+	Normals = MakeShared<ID3D12ResourcePtr>();
+	Diffuse = MakeShared<ID3D12ResourcePtr>();
+	
+	Register<PassOutput<ID3D12ResourcePtr>>("positions", Positions, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	Register<PassOutput<ID3D12ResourcePtr>>("normals", Normals, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	Register<PassOutput<ID3D12ResourcePtr>>("texIDs", Diffuse, D3D12_RESOURCE_STATE_RENDER_TARGET);
+}
+
+void GeometryPass::InitResources(ID3D12Device5Ptr device) 
+{
+	D3D12_CLEAR_VALUE clearValue = {};
+	clearValue.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	clearValue.Color[0] = 0.0f; // Default clear color
+	clearValue.Color[1] = 0.0f;
+	clearValue.Color[2] = 0.0f;
+	clearValue.Color[3] = 1.0f;
+
+	auto resDesc = CD3DX12_RESOURCE_DESC(
+		D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+		D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT,
+		Globals.WindowDimensions.x, Globals.WindowDimensions.y, 1, 1,
+		DXGI_FORMAT_R8G8B8A8_UNORM,
+		1, 0,
+		D3D12_TEXTURE_LAYOUT_UNKNOWN, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
+
+	ID3D12ResourcePtr positions;
+	GRAPHICS_ASSERT(device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&resDesc,
+		D3D12_RESOURCE_STATE_RENDER_TARGET,
+		&clearValue,
+		IID_PPV_ARGS(&positions)));
+	Positions = MakeShared<ID3D12ResourcePtr>(positions);
+
+	resDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+
+	ID3D12ResourcePtr normals;
+	GRAPHICS_ASSERT(device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&resDesc,
+		D3D12_RESOURCE_STATE_RENDER_TARGET,
+		&clearValue,
+		IID_PPV_ARGS(&normals)));
+	Normals = MakeShared<ID3D12ResourcePtr>(normals);
+
+	resDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+
+	ID3D12ResourcePtr diffuse;
+	GRAPHICS_ASSERT(device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&resDesc,
+		D3D12_RESOURCE_STATE_RENDER_TARGET,
+		nullptr,
+		IID_PPV_ARGS(&diffuse)));
+	Diffuse = MakeShared<ID3D12ResourcePtr>(diffuse);
+
+	ID3D12ResourcePtr specular;
+	GRAPHICS_ASSERT(device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&resDesc,
+		D3D12_RESOURCE_STATE_RENDER_TARGET,
+		nullptr,
+		IID_PPV_ARGS(&specular)));
+	Specular = MakeShared<ID3D12ResourcePtr>(specular);
+
+	auto resHeap = D3D::CreateDescriptorHeap(device, 4, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, false);
+	GBuffers = MakeShared<ID3D12DescriptorHeapPtr>(resHeap);
+
+	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = GBuffers->GetInterfacePtr()->GetCPUDescriptorHandleForHeapStart();
+	UINT rtvDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+
+	device->CreateRenderTargetView(*Positions, nullptr, rtvHandle);
+	rtvHandle.ptr += rtvDescriptorSize;
+
+	device->CreateRenderTargetView(*Normals, nullptr, rtvHandle);
+	rtvHandle.ptr += rtvDescriptorSize;
+
+	device->CreateRenderTargetView(*Diffuse, nullptr, rtvHandle);
+	rtvHandle.ptr += rtvDescriptorSize;
+
+	device->CreateRenderTargetView(*Specular, nullptr, rtvHandle);
+
+	Heaps.PushBack(Globals.CBVHeap);
+	Heaps.PushBack(Globals.SamplerHeap);
+}
+
+void GeometryPass::InitRootSignature() 
+{
+	std::vector<D3D12_DESCRIPTOR_RANGE> cbvRanges;
+	for (uint32_t i = 0; i < NumGlobalCBVDescriptorRanges; ++i)
+		cbvRanges.emplace_back(DescriptorRangeBuilder::CreateRange(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, UINT_MAX, 0, i));
+
+	RootSignatureData.AddDescriptorTable(cbvRanges, D3D12_SHADER_VISIBILITY_ALL);
+	RootSignatureData.AddDescriptor(D3D12_ROOT_PARAMETER_TYPE_CBV, D3D12_SHADER_VISIBILITY_ALL, 0, 200);
+
+	RootSignatureData.Build(Device);
+}
+
+void GeometryPass::InitPipelineState() 
+{
+	Shader<Vertex> vertexShader("GeometryPass");
+	Shader<Pixel> pixelShader("GeometryPass");
+
+	BufferLayout layout{ {"POSITION", DataType::float3},
+						{"NORMAL", DataType::float3},
+						{"TANGENT", DataType::float3},
+						{"BITANGENT", DataType::float3},
+						{"TEXCOORD", DataType::float2}, };
+
+	CD3DX12_RASTERIZER_DESC rasterizerDesc(D3D12_DEFAULT);
+	rasterizerDesc.CullMode = D3D12_CULL_MODE_NONE;  // No culling
+
+	// Describe and create the graphics pipeline state object (PSO).
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
+	psoDesc.InputLayout = layout;
+	psoDesc.pRootSignature = RootSignatureData.RootSignaturePtr.GetInterfacePtr();
+	psoDesc.VS = CD3DX12_SHADER_BYTECODE(vertexShader.GetBlob());
+	psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.GetBlob());
+	psoDesc.RasterizerState = rasterizerDesc;
+	psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+	psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+	psoDesc.SampleMask = UINT_MAX;
+	psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	psoDesc.NumRenderTargets = 1;
+	psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	psoDesc.RTVFormats[1] = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	psoDesc.RTVFormats[2] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	psoDesc.RTVFormats[3] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+	psoDesc.SampleDesc.Count = 1;
+
+	GRAPHICS_ASSERT(Device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&PipelineState)));
 }

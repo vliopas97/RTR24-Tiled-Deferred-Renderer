@@ -1,6 +1,7 @@
 #include "Camera.h"
 #include "Application.h"
 
+#include <algorithm>
 #include <numbers>
 
 template<typename T>

@@ -141,16 +141,16 @@ struct LocalRenderPassResource_CBV : public LocalRenderPassResources<T>
 template<typename T>
 using LocalRenderPass_CBV = LocalRenderPassResource_CBV<ConstantBuffer<T>>;
 
-struct GlobalRenderPassResources
+struct DescriptorHeapComposite
 {
 public:
-	virtual ~GlobalRenderPassResources() = default;
+	virtual ~DescriptorHeapComposite() = default;
 	void Bind(ID3D12GraphicsCommandList4Ptr cmdList) const;
-	virtual void Setup(ID3D12Device5Ptr device);
+	void PushBack(ID3D12DescriptorHeapPtr heap);
 
 private:
 	void BindDescriptorHeap(ID3D12GraphicsCommandList4Ptr cmdList, ID3D12DescriptorHeapPtr heap) const;
 
-public:
+private:
 	std::vector<ID3D12DescriptorHeapPtr> Heaps;
 };

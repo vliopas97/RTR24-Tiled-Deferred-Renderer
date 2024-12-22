@@ -1,4 +1,5 @@
 // pixel.hlsl
+#define HLSL
 #include "..\Common.hlsli"
 #include "core.hlsli"
 

@@ -142,7 +142,7 @@ public:
 
 protected:
 	virtual void Bind(ID3D12GraphicsCommandList4Ptr cmdList) const;
-	inline virtual void InitResources(ID3D12Device5Ptr device) { Resources.Setup(device); }
+	virtual void InitResources(ID3D12Device5Ptr device);
 	virtual void InitRootSignature() = 0;
 	virtual void InitPipelineState() = 0;
 
@@ -163,7 +163,7 @@ protected:
 
 	ID3D12PipelineStatePtr PipelineState;
 	RootSignature RootSignatureData;
-	GlobalRenderPassResources Resources;
+	DescriptorHeapComposite Heaps;
 
 	SharedPtr<ID3D12ResourcePtr> RTVBuffer{};
 	SharedPtr<ID3D12ResourcePtr> DSVBuffer{};
@@ -178,6 +178,7 @@ public:
 	ForwardRenderPass(std::string&& name);
 	void Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene) override;
 protected:
+	void InitResources(ID3D12Device5Ptr device) override;
 	void InitRootSignature() override;
 	void InitPipelineState() override;
 };
@@ -200,9 +201,26 @@ public:
 	GUIPass(std::string&& name, ImGuiLayer& layer);
 	void Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene) override;
 protected:
-	inline void InitResources(ID3D12Device5Ptr device) {}
+	inline void InitResources(ID3D12Device5Ptr device) override {}
 	void InitRootSignature() override {}
 	void InitPipelineState() override {}
 private:
 	ImGuiLayer& Layer;
+};
+
+class GeometryPass final : public RenderPass
+{
+public:
+	GeometryPass(std::string&& name);
+	void Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene) override {};
+protected:
+	void InitResources(ID3D12Device5Ptr device) override;
+	void InitRootSignature() override;
+	void InitPipelineState() override;
+private:
+	SharedPtr<ID3D12ResourcePtr> Positions;
+	SharedPtr<ID3D12ResourcePtr> Normals;
+	SharedPtr<ID3D12ResourcePtr> Diffuse;
+	SharedPtr<ID3D12ResourcePtr> Specular;
+	SharedPtr<ID3D12DescriptorHeapPtr> GBuffers;
 };

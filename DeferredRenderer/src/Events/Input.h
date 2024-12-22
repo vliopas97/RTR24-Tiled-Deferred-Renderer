@@ -7,6 +7,7 @@
 
 #include <queue>
 #include <bitset>
+#include <optional>
 
 class InputManager
 {
