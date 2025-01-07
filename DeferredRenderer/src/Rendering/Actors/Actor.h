@@ -18,7 +18,7 @@ constexpr uint32_t MaxResourcesPerInstance = 10;
 
 class Actor
 {
-	using Resources2RenderPassMap = std::unordered_map<std::type_index, std::vector<LocalRenderPassBase*>>;
+	using Resources2RenderPassMap = std::unordered_map<std::type_index, std::vector<std::pair<LocalRenderPassBase*, UINT>>>;
 
 public:
 	Actor(ID3D12Device5Ptr device, const class Camera& camera);
@@ -45,10 +45,10 @@ public:
 protected:
 	template<typename Pass, typename T>
 	requires std::is_base_of_v<LocalRenderPassBase, T> && std::is_base_of_v<RenderPass, Pass>
-	void AddResourceToMap(T& rscPtr)
+	void AddResourceToMap(T& rscPtr, UINT slot)
 	{
 		auto& resources = ResourceMap[std::type_index(typeid(Pass))];
-		resources.push_back(&rscPtr);
+		resources.emplace_back(&rscPtr, slot);
 	}
 
 private:
@@ -59,8 +59,8 @@ private:
 		auto it = ResourceMap.find(std::type_index(typeid(Pass)));
 		if (it != ResourceMap.end())
 		{
-			for (const auto& resource : it->second)
-				resource->Bind(cmdList);
+			for (const auto& [resource, slot] : it->second)
+				resource->Bind(cmdList, slot);
 		}
 	}
 
@@ -93,6 +93,16 @@ inline void Actor::Bind<ForwardRenderPass>(ID3D12GraphicsCommandList4Ptr cmdList
 	cmdList->IASetVertexBuffers(0, 1, &VBuffer.GetView());
 	cmdList->IASetIndexBuffer(&IBuffer.GetView());
 	BindLocalResources<ForwardRenderPass>(cmdList);
+	cmdList->DrawIndexedInstanced(IBuffer.GetIndexCount(), 1, 0, 0, 0);
+}
+
+template<>
+inline void Actor::Bind<GeometryPass>(ID3D12GraphicsCommandList4Ptr cmdList) const
+{
+	cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	cmdList->IASetVertexBuffers(0, 1, &VBuffer.GetView());
+	cmdList->IASetIndexBuffer(&IBuffer.GetView());
+	BindLocalResources<GeometryPass>(cmdList);
 	cmdList->DrawIndexedInstanced(IBuffer.GetIndexCount(), 1, 0, 0, 0);
 }
 

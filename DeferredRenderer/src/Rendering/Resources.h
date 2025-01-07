@@ -103,7 +103,7 @@ struct Transition : public TransitionBase
 struct LocalRenderPassBase
 {
 	virtual ~LocalRenderPassBase() = default;
-	virtual void Bind(ID3D12GraphicsCommandList4Ptr cmdList) const = 0;
+	virtual void Bind(ID3D12GraphicsCommandList4Ptr cmdList, UINT slot) const = 0;
 };
 
 template<typename T>
@@ -111,9 +111,6 @@ requires HasGetGPUVirtualAddress<T>
 struct LocalRenderPassResources : public LocalRenderPassBase
 {
 	LocalRenderPassResources() = default;
-	LocalRenderPassResources(UINT slot)
-		:Resource(), Slot(slot)
-	{}
 
 	uint64_t GetGPUVirtualAddress() const
 	{
@@ -124,7 +121,6 @@ struct LocalRenderPassResources : public LocalRenderPassBase
 	}
 
 	T Resource;
-	UINT Slot;
 };
 
 template<typename T>
@@ -132,9 +128,9 @@ requires is_base_of_template<ConstantBuffer, T>::value
 struct LocalRenderPassResource_CBV : public LocalRenderPassResources<T>
 {
 	using LocalRenderPassResources::LocalRenderPassResources;
-	virtual void Bind(ID3D12GraphicsCommandList4Ptr cmdList) const override
+	virtual void Bind(ID3D12GraphicsCommandList4Ptr cmdList, UINT slot) const override
 	{
-		cmdList->SetGraphicsRootConstantBufferView(Slot, GetGPUVirtualAddress());
+		cmdList->SetGraphicsRootConstantBufferView(slot, GetGPUVirtualAddress());
 	}
 };
 

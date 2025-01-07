@@ -40,6 +40,13 @@ RenderGraph::RenderGraph(ID3D12Device5Ptr device, ImGuiLayer& layer)
 		pass->SetInput("depthBuffer", "clear.depthBuffer");
 		Add(pass);
 	}
+	// Geometry Pass
+	{
+		auto pass = MakeUnique<GeometryPass>("geometryPass");
+		pass->Init(device);
+		pass->SetInput("depthBuffer", "forwardPass.depthBuffer");
+		Add(pass);
+	}
 	// GUI layer
 	{
 		auto pass = MakeUnique<GUIPass>("GUI", layer);

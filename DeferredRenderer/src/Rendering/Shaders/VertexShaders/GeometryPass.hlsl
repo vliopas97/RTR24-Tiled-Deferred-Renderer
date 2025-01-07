@@ -28,6 +28,5 @@ float2 texCoords : TEXCOORD)
     result.TBN = calcTBNmatrix(normal, tangent, bitangent);
     result.texCoords = texCoords;
     result.position = mul(globalConstants.ViewProjection, mul(actorData.Model, float4(position, 1.0f)));
-    
     return result;
 }

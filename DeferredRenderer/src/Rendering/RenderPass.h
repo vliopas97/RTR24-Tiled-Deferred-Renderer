@@ -212,7 +212,7 @@ class GeometryPass final : public RenderPass
 {
 public:
 	GeometryPass(std::string&& name);
-	void Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene) override {};
+	void Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene) override;;
 protected:
 	void InitResources(ID3D12Device5Ptr device) override;
 	void InitRootSignature() override;
@@ -222,5 +222,7 @@ private:
 	SharedPtr<ID3D12ResourcePtr> Normals;
 	SharedPtr<ID3D12ResourcePtr> Diffuse;
 	SharedPtr<ID3D12ResourcePtr> Specular;
+
 	SharedPtr<ID3D12DescriptorHeapPtr> GBuffers;
+	std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 4> RTVHandles;
 };
