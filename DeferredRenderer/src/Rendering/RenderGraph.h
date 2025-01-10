@@ -27,6 +27,7 @@ public:
 		if (it != Passes.end()) throw std::invalid_argument("Pass name already exists");
 
 		LinkInputs(*renderPass);
+		renderPass->Init(Device);
 		Passes.emplace_back(std::move(renderPass));
 	}
 
@@ -37,12 +38,15 @@ private:
 	void LinkInputs(RenderPass& renderPass);
 	void LinkGlobalInputs();
 	void Validate();
+	void TransitionNotPropagatedResources();
 
 	void AddGlobalInputs(UniquePtr<PassInputBase> in);
 	void AddGlobalOutputs(UniquePtr<PassOutputBase> out);
 
 private:
 	using Transitions2DArray = std::vector<std::vector<UniquePtr<TransitionBase>>>;
+
+	ID3D12Device5Ptr Device;
 	std::vector<UniquePtr<PassInputBase>> GraphOutputs;
 	std::vector<UniquePtr<PassOutputBase>> GraphInputs;
 	Transitions2DArray Transitions;

@@ -9,13 +9,13 @@ auto createResourceTransition = [](const PassInputBase& input, const PassOutputB
 -> std::optional<UniquePtr<TransitionBase>>
 	{
 		if (input.GetResourceState() != output.GetResourceState())
-		{
 			return input.GetResourceTransition(output.GetResourceState());
-		}
+
 		return std::nullopt;
 	};
 
 RenderGraph::RenderGraph(ID3D12Device5Ptr device, ImGuiLayer& layer)
+	:Device(device)
 {
 	RTVBuffer = MakeShared<ID3D12ResourcePtr>(Globals.RTVBuffer);
 	DSVBuffer = MakeShared<ID3D12ResourcePtr>(Globals.DSVBuffer);
@@ -27,35 +27,37 @@ RenderGraph::RenderGraph(ID3D12Device5Ptr device, ImGuiLayer& layer)
 	// Clear Pass
 	{
 		auto pass = MakeUnique<ClearPass>("clear");
-		pass->Init(device);
+		//pass->Init(device);
 		pass->SetInput("renderTarget", "$.renderTarget");
 		pass->SetInput("depthBuffer", "$.depthBuffer");
-		Add(pass);
-	}
-	// Forward Rendering Pass
-	{
-		auto pass = MakeUnique<ForwardRenderPass>("forwardPass");
-		pass->Init(device);
-		pass->SetInput("renderTarget", "clear.renderTarget");
-		pass->SetInput("depthBuffer", "clear.depthBuffer");
 		Add(pass);
 	}
 	// Geometry Pass
 	{
 		auto pass = MakeUnique<GeometryPass>("geometryPass");
-		pass->Init(device);
-		pass->SetInput("depthBuffer", "forwardPass.depthBuffer");
+		pass->SetInput("depthBuffer", "clear.depthBuffer");
+		Add(pass);
+	}
+	// Lighting Pass
+	{
+		auto pass = MakeUnique<LightingPass>("lightingPass");
+		pass->SetInput("renderTarget", "clear.renderTarget");
+		pass->SetInput("positions", "geometryPass.positions");
+		pass->SetInput("normals", "geometryPass.normals");
+		pass->SetInput("diffuse", "geometryPass.diffuse");
+		pass->SetInput("specular", "geometryPass.specular");
+		pass->SetInput("srvHeap", "geometryPass.srvHeap");
 		Add(pass);
 	}
 	// GUI layer
 	{
 		auto pass = MakeUnique<GUIPass>("GUI", layer);
-		pass->Init(device);
 		Add(pass);
 	}
 
-	SetInputTarget("renderTarget", "forwardPass.renderTarget");
+	SetInputTarget("renderTarget", "lightingPass.renderTarget");
 	Validate();
+	TransitionNotPropagatedResources();
 }
 
 void RenderGraph::Tick()
@@ -189,6 +191,16 @@ void RenderGraph::Validate()
 
 	LinkGlobalInputs();
 	IsValidated = true;
+}
+
+void RenderGraph::TransitionNotPropagatedResources()
+{
+	UINT i = 0;
+	for (const auto& pass : Passes)
+	{
+		auto t = pass->GetInverseTransitions(Transitions[i]);
+		Transitions[++i].insert(Transitions[i].end(), std::make_move_iterator(t.begin()), std::make_move_iterator(t.end()));
+	}
 }
 
 void RenderGraph::AddGlobalInputs(UniquePtr<PassInputBase> in)
