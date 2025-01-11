@@ -80,7 +80,6 @@ struct TransitionBase
 	virtual const void* const GetResource() const = 0;
 	virtual D3D12_RESOURCE_STATES GetPrevious() const = 0;
 	virtual D3D12_RESOURCE_STATES GetNext() const = 0;
-	virtual UniquePtr<TransitionBase> GetInverse() const = 0;
 };
 
 template<ResourceType T>
@@ -102,7 +101,6 @@ struct Transition : public TransitionBase
 	const void* const GetResource() const { return reinterpret_cast<void*>(Resource.get()); }
 	D3D12_RESOURCE_STATES GetPrevious() const { return Previous; }
 	D3D12_RESOURCE_STATES GetNext() const { return Next; }
-	virtual UniquePtr<TransitionBase> GetInverse() const override { return MakeUnique<Transition<T>>(Resource, Next, Previous); }
 
 	SharedPtr<T>& Resource;
 	D3D12_RESOURCE_STATES Previous{};

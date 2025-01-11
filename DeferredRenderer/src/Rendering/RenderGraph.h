@@ -38,7 +38,7 @@ private:
 	void LinkInputs(RenderPass& renderPass);
 	void LinkGlobalInputs();
 	void Validate();
-	void TransitionNotPropagatedResources();
+	void TransitionUnpropagatedResources();
 
 	void AddGlobalInputs(UniquePtr<PassInputBase> in);
 	void AddGlobalOutputs(UniquePtr<PassOutputBase> out);

@@ -57,7 +57,7 @@ RenderGraph::RenderGraph(ID3D12Device5Ptr device, ImGuiLayer& layer)
 
 	SetInputTarget("renderTarget", "lightingPass.renderTarget");
 	Validate();
-	TransitionNotPropagatedResources();
+	TransitionUnpropagatedResources();
 }
 
 void RenderGraph::Tick()
@@ -193,7 +193,7 @@ void RenderGraph::Validate()
 	IsValidated = true;
 }
 
-void RenderGraph::TransitionNotPropagatedResources()
+void RenderGraph::TransitionUnpropagatedResources()
 {
 	UINT i = 0;
 	for (const auto& pass : Passes)

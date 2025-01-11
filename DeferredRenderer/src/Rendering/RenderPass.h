@@ -26,6 +26,7 @@ public:
 	virtual void Validate() const = 0;
 	virtual std::optional<UniquePtr<TransitionBase>> GetResourceTransition(D3D12_RESOURCE_STATES prev) const = 0;
 	virtual const void* const GetRscPtr() const = 0;
+	virtual std::optional<UniquePtr<TransitionBase>> BuildTransition(D3D12_RESOURCE_STATES prev, D3D12_RESOURCE_STATES next) const = 0;
 
 protected:
 	PassInputBase(std::string&& name, D3D12_RESOURCE_STATES state);
@@ -75,18 +76,31 @@ public:
 		return GetResourceTransitionImpl(prev);
 	}
 
-	const void* const GetRscPtr() const override { return reinterpret_cast<void*>(Resource.get()); }
-
-private:
-	std::optional<UniquePtr<TransitionBase>> GetResourceTransitionImpl(D3D12_RESOURCE_STATES prev) const
+	virtual std::optional<UniquePtr<TransitionBase>> BuildTransition(D3D12_RESOURCE_STATES prev, D3D12_RESOURCE_STATES next) const override
 	{
-		return MakeUnique<Transition<T>>(Resource, prev, State);
+		return BuildTransitionImpl(prev, next);
 	}
 
-	std::optional<UniquePtr<TransitionBase>> GetResourceTransitionImpl(D3D12_RESOURCE_STATES prev) const 
-		requires (std::is_base_of_v<ID3D12DescriptorHeapPtr, T>)
+	const void* const GetRscPtr() const override { return reinterpret_cast<void*>(Resource.get()); }
+
+
+private:
+	template <typename U = T>
+	std::optional<UniquePtr<TransitionBase>> GetResourceTransitionImpl(D3D12_RESOURCE_STATES prev) const
 	{
-		return std::nullopt;
+		if constexpr (std::is_base_of_v<ID3D12DescriptorHeapPtr, U>)
+			return std::nullopt;
+		else
+			return MakeUnique<Transition<U>>(Resource, prev, State);
+	}
+
+	template <typename U = T>
+	std::optional<UniquePtr<TransitionBase>> BuildTransitionImpl(D3D12_RESOURCE_STATES prev, D3D12_RESOURCE_STATES next) const
+	{
+		if constexpr (std::is_base_of_v<ID3D12DescriptorHeapPtr, U>)
+			return std::nullopt;
+		else
+			return MakeUnique<Transition<U>>(Resource, prev, next);
 	}
 
 private:

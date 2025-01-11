@@ -121,17 +121,14 @@ std::vector<UniquePtr<TransitionBase>> RenderPass::GetInverseTransitions(const T
 				  }
 		);
 
-		if (it != Outputs.end()) continue;
+		if (it == Outputs.end()) continue;
 
-		auto new_it = std::find_if(transitions.begin(), transitions.end(), [&input](const UniquePtr<TransitionBase>& t)
-								   {
-									   return t->GetResource() == input->GetRscPtr();
-								   });
+		if (input->GetResourceState() == (*it)->GetResourceState()) continue;
 
-		if (transitions.end() == new_it) continue; // also avoids DescHeapPtr transitions without needed anything more
+		auto& ptr = input->BuildTransition(input->GetResourceState(), (*it)->GetResourceState());
+		if (!ptr.has_value()) continue;
 
-		auto& oldTransition = *new_it;
-		extraTransitions.push_back(std::move(oldTransition->GetInverse()));
+		extraTransitions.emplace_back( std::move(ptr.value()));
 	}
 
 	return extraTransitions;
@@ -517,6 +514,10 @@ LightingPass::LightingPass(std::string&& name)
 	Register<PassInput<ID3D12DescriptorHeapPtr>>("srvHeap", SRVHeap);
 
 	Register<PassOutput<ID3D12ResourcePtr>>("renderTarget", RTVBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	Register<PassOutput<ID3D12ResourcePtr>>("positions", Positions, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	Register<PassOutput<ID3D12ResourcePtr>>("normals", Normals, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	Register<PassOutput<ID3D12ResourcePtr>>("diffuse", Diffuse, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	Register<PassOutput<ID3D12ResourcePtr>>("specular", Specular, D3D12_RESOURCE_STATE_RENDER_TARGET);
 }
 
 void LightingPass::Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene)
