@@ -274,19 +274,55 @@ void ClearPass::Bind(ID3D12GraphicsCommandList4Ptr cmdList) const
 	const float clearColor[4] = { 0.4f, 0.6f, 0.2f, 1.0f };
 	cmdList->ClearRenderTargetView(Globals.RTVHandle, clearColor, 0, nullptr);
 	cmdList->ClearDepthStencilView(Globals.DSVHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0.0f, 0, nullptr);
-
 }
 
-GUIPass::GUIPass(std::string&& name, ImGuiLayer& layer)
-	:RenderPass(std::move(name)), Layer(layer)
-{}
+GUIPass::GUIPass(std::string && name)
+	:RenderPass(std::move(name))
+{
+	Register<PassInput<ID3D12ResourcePtr>>("positions", Positions, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	Register<PassInput<ID3D12ResourcePtr>>("normals", Normals, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	Register<PassInput<ID3D12ResourcePtr>>("diffuse", Diffuse, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	Register<PassInput<ID3D12ResourcePtr>>("specular", Specular, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	Register<PassInput<ID3D12DescriptorHeapPtr>>("srvHeap", SRVHeap);
+
+	Register<PassOutput<ID3D12ResourcePtr>>("positions", Positions, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	Register<PassOutput<ID3D12ResourcePtr>>("normals", Normals, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	Register<PassOutput<ID3D12ResourcePtr>>("diffuse", Diffuse, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	Register<PassOutput<ID3D12ResourcePtr>>("specular", Specular, D3D12_RESOURCE_STATE_RENDER_TARGET);
+}
+
+GUIPass::~GUIPass() 
+{
+	Layer->OnDetach(); 
+}
 
 void GUIPass::Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene & scene)
 {
-	Layer.Begin();
+	Layer->Begin();
 	Bind(cmdList);
 	scene.Bind<GUIPass>(cmdList);
-	Layer.End(cmdList);
+	auto d = Positions->GetInterfacePtr()->GetDesc();
+	ImGui::Begin("G-Buffer Viewer");
+	ImGui::Image((ImTextureID)GPUHandlesGBuffers[1].ptr, ImVec2(225, 225));
+	ImGui::Image((ImTextureID)GPUHandlesGBuffers[2].ptr, ImVec2(225, 225));
+	ImGui::Image((ImTextureID)GPUHandlesGBuffers[3].ptr, ImVec2(225, 225));
+	ImGui::Image((ImTextureID)GPUHandlesGBuffers[4].ptr, ImVec2(225, 225));
+	ImGui::End();
+
+	Layer->End(cmdList);
+}
+
+void GUIPass::InitResources(ID3D12Device5Ptr device) 
+{
+	auto handle = SRVHeap->GetInterfacePtr()->GetGPUDescriptorHandleForHeapStart();
+	for (UINT i = 0; i < GPUHandlesGBuffers.size(); i++)
+	{
+		GPUHandlesGBuffers[i] = handle;
+		handle.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	}
+
+	Layer = MakeUnique<ImGuiLayer>(*SRVHeap);
+	Layer->OnAttach(Device);
 }
 
 GeometryPass::GeometryPass(std::string&& name) : 
@@ -363,6 +399,15 @@ void GeometryPass::InitResources(ID3D12Device5Ptr device)
 		IID_PPV_ARGS(&normals)));
 	Normals = MakeShared<ID3D12ResourcePtr>(normals);
 
+	ID3D12ResourcePtr test;
+	GRAPHICS_ASSERT(device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&resDesc,
+		D3D12_RESOURCE_STATE_RENDER_TARGET,
+		&clearValue,
+		IID_PPV_ARGS(&test)));
+
 	resDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
 	clearValue.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
 
@@ -389,7 +434,7 @@ void GeometryPass::InitResources(ID3D12Device5Ptr device)
 	auto resHeap = D3D::CreateDescriptorHeap(device, 4, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, false);
 	RTVHeap = MakeShared<ID3D12DescriptorHeapPtr>(resHeap);
 
-	auto rtvHeap = D3D::CreateDescriptorHeap(device, 4, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
+	auto rtvHeap = D3D::CreateDescriptorHeap(device, 5, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
 	SRVHeap = MakeShared<ID3D12DescriptorHeapPtr>(rtvHeap);
 
 	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = RTVHeap->GetInterfacePtr()->GetCPUDescriptorHandleForHeapStart();
@@ -422,6 +467,9 @@ void GeometryPass::InitResources(ID3D12Device5Ptr device)
 
 	D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = SRVHeap->GetInterfacePtr()->GetCPUDescriptorHandleForHeapStart();
 	UINT srvDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+	device->CreateShaderResourceView(test, &srvDesc, srvHandle);
+	srvHandle.ptr += srvDescriptorSize;
 
 	device->CreateShaderResourceView(*Positions, &srvDesc, srvHandle);
 	srvHandle.ptr += srvDescriptorSize;
@@ -514,10 +562,11 @@ LightingPass::LightingPass(std::string&& name)
 	Register<PassInput<ID3D12DescriptorHeapPtr>>("srvHeap", SRVHeap);
 
 	Register<PassOutput<ID3D12ResourcePtr>>("renderTarget", RTVBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
-	Register<PassOutput<ID3D12ResourcePtr>>("positions", Positions, D3D12_RESOURCE_STATE_RENDER_TARGET);
-	Register<PassOutput<ID3D12ResourcePtr>>("normals", Normals, D3D12_RESOURCE_STATE_RENDER_TARGET);
-	Register<PassOutput<ID3D12ResourcePtr>>("diffuse", Diffuse, D3D12_RESOURCE_STATE_RENDER_TARGET);
-	Register<PassOutput<ID3D12ResourcePtr>>("specular", Specular, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	Register<PassOutput<ID3D12ResourcePtr>>("positions", Positions, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	Register<PassOutput<ID3D12ResourcePtr>>("normals", Normals, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	Register<PassOutput<ID3D12ResourcePtr>>("diffuse", Diffuse, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	Register<PassOutput<ID3D12ResourcePtr>>("specular", Specular, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	Register<PassOutput<ID3D12DescriptorHeapPtr>>("srvHeap", SRVHeap);
 }
 
 void LightingPass::Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene)
@@ -554,11 +603,8 @@ void LightingPass::InitResources(ID3D12Device5Ptr device)
 
 void LightingPass::InitRootSignature()
 {
-	//std::vector<D3D12_DESCRIPTOR_RANGE> srvRanges;
-	//for (uint32_t i = 0; i < 5; ++i)
-	//	srvRanges.emplace_back(DescriptorRangeBuilder::CreateRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, UINT_MAX, 0, i));
 	std::vector<D3D12_DESCRIPTOR_RANGE> srvRanges = {
-		DescriptorRangeBuilder::CreateRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 0, 0)
+		DescriptorRangeBuilder::CreateRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5, 0, 0)
 	};
 
 	std::vector<D3D12_DESCRIPTOR_RANGE> samplerRanges = {

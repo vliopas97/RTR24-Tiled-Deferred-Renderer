@@ -14,7 +14,7 @@ auto createResourceTransition = [](const PassInputBase& input, const PassOutputB
 		return std::nullopt;
 	};
 
-RenderGraph::RenderGraph(ID3D12Device5Ptr device, ImGuiLayer& layer)
+RenderGraph::RenderGraph(ID3D12Device5Ptr device)
 	:Device(device)
 {
 	RTVBuffer = MakeShared<ID3D12ResourcePtr>(Globals.RTVBuffer);
@@ -51,7 +51,12 @@ RenderGraph::RenderGraph(ID3D12Device5Ptr device, ImGuiLayer& layer)
 	}
 	// GUI layer
 	{
-		auto pass = MakeUnique<GUIPass>("GUI", layer);
+		auto pass = MakeUnique<GUIPass>("GUI");
+		pass->SetInput("positions", "lightingPass.positions");
+		pass->SetInput("normals", "lightingPass.normals");
+		pass->SetInput("diffuse", "lightingPass.diffuse");
+		pass->SetInput("specular", "lightingPass.specular");
+		pass->SetInput("srvHeap", "lightingPass.srvHeap");
 		Add(pass);
 	}
 

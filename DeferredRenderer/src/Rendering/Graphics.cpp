@@ -24,14 +24,13 @@ namespace
 
 Graphics::Graphics(Window& window)
 	:WinHandle(window.GetHandle()), SwapChainSize(window.GetWidth(), window.GetHeight()), 
-	SceneCamera(), ImGui(MakeUnique<ImGuiLayer>())
+	SceneCamera()
 {
 	Init();
 	InitGlobals();
 
-	ImGui->OnAttach(Device);
 	InitScene();
-	Graph = MakeUnique<RenderGraph>(Device, *ImGui);
+	Graph = MakeUnique<RenderGraph>(Device);
 }
 
 Graphics::~Graphics()
@@ -153,8 +152,6 @@ void Graphics::Shutdown()
 	CmdQueue->Signal(Fence, ++FenceValue);
 	Fence->SetEventOnCompletion(FenceValue, FenceEvent);
 	WaitForSingleObject(FenceEvent, INFINITE);
-
-	ImGui.reset();
 }
 
 void Graphics::CreateDevice()

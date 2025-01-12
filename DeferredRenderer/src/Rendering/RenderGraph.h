@@ -7,7 +7,7 @@
 class RenderGraph
 {
 public:
-	RenderGraph(ID3D12Device5Ptr device, ImGuiLayer& layer);
+	RenderGraph(ID3D12Device5Ptr device);
 	~RenderGraph() = default;
 
 	void Execute(ID3D12GraphicsCommandList4Ptr cmdList, const class Scene& scene);

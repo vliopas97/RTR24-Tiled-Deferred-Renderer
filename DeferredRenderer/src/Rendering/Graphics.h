@@ -24,7 +24,6 @@ struct Graphics
     ID3D12Device5Ptr GetDevice() { return Device; }
     ID3D12CommandAllocatorPtr GetCommandAllocator() { return FrameObjects[SwapChain->GetCurrentBackBufferIndex()].CmdAllocator; }
     ID3D12GraphicsCommandList4Ptr GetCommandList() { return CmdList; }
-    const UniquePtr<ImGuiLayer>& GetImGui() { return ImGui; }
 
 private:
 	void Init();
@@ -78,8 +77,5 @@ private:
     static const uint32_t DSVHeapSize = 3;
 
     Camera SceneCamera;
-
-    UniquePtr<ImGuiLayer> ImGui;
-
 };
 

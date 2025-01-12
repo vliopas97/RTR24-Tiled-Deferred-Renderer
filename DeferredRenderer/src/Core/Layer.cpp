@@ -7,9 +7,9 @@ static bool showDemoWindow = false;
 
 void ImGui_ImplWin32_InitPlatformInterface();
 
-ImGuiLayer::ImGuiLayer()
-{
-}
+ImGuiLayer::ImGuiLayer(ID3D12DescriptorHeapPtr descHeap)
+	:DescriptorHeap(descHeap)
+{}
 
 void ImGuiLayer::OnAttach(ID3D12Device5Ptr device)
 {
@@ -27,7 +27,8 @@ void ImGuiLayer::OnAttach(ID3D12Device5Ptr device)
 	heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 
-	GRAPHICS_ASSERT(device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&DescriptorHeap)));
+	if (!DescriptorHeap.GetInterfacePtr())
+		GRAPHICS_ASSERT(device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&DescriptorHeap)));
 
 	ImGui_ImplWin32_Init(Application::GetApp().GetWindow()->GetHandle());
 	ImGui_ImplDX12_Init(device, 
