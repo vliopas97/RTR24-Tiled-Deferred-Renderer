@@ -276,7 +276,7 @@ void ClearPass::Bind(ID3D12GraphicsCommandList4Ptr cmdList) const
 	cmdList->ClearDepthStencilView(Globals.DSVHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0.0f, 0, nullptr);
 }
 
-GUIPass::GUIPass(std::string && name)
+GUIPass::GUIPass(std::string&& name)
 	:RenderPass(std::move(name))
 {
 	Register<PassInput<ID3D12ResourcePtr>>("positions", Positions, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
@@ -301,28 +301,65 @@ void GUIPass::Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene & scene)
 	Layer->Begin();
 	Bind(cmdList);
 	scene.Bind<GUIPass>(cmdList);
-	auto d = Positions->GetInterfacePtr()->GetDesc();
-	ImGui::Begin("G-Buffer Viewer");
-	ImGui::Image((ImTextureID)GPUHandlesGBuffers[1].ptr, ImVec2(225, 225));
-	ImGui::Image((ImTextureID)GPUHandlesGBuffers[2].ptr, ImVec2(225, 225));
-	ImGui::Image((ImTextureID)GPUHandlesGBuffers[3].ptr, ImVec2(225, 225));
-	ImGui::Image((ImTextureID)GPUHandlesGBuffers[4].ptr, ImVec2(225, 225));
-	ImGui::End();
+
+	GBuffersViewerWindow();
 
 	Layer->End(cmdList);
 }
 
 void GUIPass::InitResources(ID3D12Device5Ptr device) 
 {
-	auto handle = SRVHeap->GetInterfacePtr()->GetGPUDescriptorHandleForHeapStart();
-	for (UINT i = 0; i < GPUHandlesGBuffers.size(); i++)
-	{
-		GPUHandlesGBuffers[i] = handle;
-		handle.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	}
-
 	Layer = MakeUnique<ImGuiLayer>(*SRVHeap);
 	Layer->OnAttach(Device);
+
+	auto handle = Layer->DescriptorHeap->GetGPUDescriptorHandleForHeapStart();
+	for (UINT i = 0; i < GPUHandlesGBuffers.size(); i++)
+	{
+		handle.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		GPUHandlesGBuffers[i] = handle;
+	}
+}
+
+void GUIPass::GBuffersViewerWindow() const
+{
+	ImGui::Begin("G-Buffer Viewer");
+
+	float aspectRatio = 9.0f / 16.0f;
+	// Define the min and max sizes for the images
+	ImVec2 minSize(360.0f, aspectRatio * 360.0f);
+	ImVec2 maxSize(480.0f, aspectRatio * 480.0f);
+
+	ImVec2 availableSize = ImGui::GetContentRegionAvail();
+
+	float width = std::max(minSize.x, std::min(maxSize.x, availableSize.x));
+	float height = width * 9.0f / 16.0f;
+
+	// If height exceeds available height, adjust width and height
+	if (height > availableSize.y)
+	{
+		height = std::max(minSize.y, std::min(maxSize.y, availableSize.y));
+		width = height * 16.0f / 9.0f;
+	}
+
+	ImVec2 imageSize(width, height);
+
+	// Dropdown items
+	const char* items[] = {
+		"Positions (View Space)",
+		"Normals (View Space)",
+		"Albedo",
+		"Specular"
+	};
+
+	static int selectedItem = 0;
+
+	// Dropdown
+	if (ImGui::Combo("Select Texture", &selectedItem, items, IM_ARRAYSIZE(items)))
+		std::cout << "Selected: " << items[selectedItem] << std::endl;
+
+	ImGui::Image((ImTextureID)GPUHandlesGBuffers[selectedItem].ptr, imageSize);
+
+	ImGui::End();
 }
 
 GeometryPass::GeometryPass(std::string&& name) : 
@@ -338,6 +375,7 @@ GeometryPass::GeometryPass(std::string&& name) :
 	Register<PassOutput<ID3D12ResourcePtr>>("diffuse", Diffuse, D3D12_RESOURCE_STATE_RENDER_TARGET);
 	Register<PassOutput<ID3D12ResourcePtr>>("specular", Specular, D3D12_RESOURCE_STATE_RENDER_TARGET);
 	Register<PassOutput<ID3D12DescriptorHeapPtr>>("srvHeap", SRVHeap);
+	Register<PassOutput<ID3D12DescriptorHeapPtr>>("srvHeapRO", SRVHeapRO);
 }
 
 void GeometryPass::Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene) 
@@ -399,15 +437,6 @@ void GeometryPass::InitResources(ID3D12Device5Ptr device)
 		IID_PPV_ARGS(&normals)));
 	Normals = MakeShared<ID3D12ResourcePtr>(normals);
 
-	ID3D12ResourcePtr test;
-	GRAPHICS_ASSERT(device->CreateCommittedResource(
-		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-		D3D12_HEAP_FLAG_NONE,
-		&resDesc,
-		D3D12_RESOURCE_STATE_RENDER_TARGET,
-		&clearValue,
-		IID_PPV_ARGS(&test)));
-
 	resDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
 	clearValue.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
 
@@ -431,11 +460,14 @@ void GeometryPass::InitResources(ID3D12Device5Ptr device)
 		IID_PPV_ARGS(&specular)));
 	Specular = MakeShared<ID3D12ResourcePtr>(specular);
 
-	auto resHeap = D3D::CreateDescriptorHeap(device, 4, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, false);
-	RTVHeap = MakeShared<ID3D12DescriptorHeapPtr>(resHeap);
+	auto rtvHeap = D3D::CreateDescriptorHeap(device, 4, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, false);
+	RTVHeap = MakeShared<ID3D12DescriptorHeapPtr>(rtvHeap);
 
-	auto rtvHeap = D3D::CreateDescriptorHeap(device, 5, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
-	SRVHeap = MakeShared<ID3D12DescriptorHeapPtr>(rtvHeap);
+	auto srvHeap = D3D::CreateDescriptorHeap(device, 4, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
+	SRVHeap = MakeShared<ID3D12DescriptorHeapPtr>(srvHeap);
+
+	auto srvHeapRO = D3D::CreateDescriptorHeap(device, 4, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, false);
+	SRVHeapRO = MakeShared<ID3D12DescriptorHeapPtr>(srvHeapRO);
 
 	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = RTVHeap->GetInterfacePtr()->GetCPUDescriptorHandleForHeapStart();
 	UINT rtvDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
@@ -465,11 +497,8 @@ void GeometryPass::InitResources(ID3D12Device5Ptr device)
 	srvDesc.Texture2D.MostDetailedMip = 0;
 	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
 
-	D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = SRVHeap->GetInterfacePtr()->GetCPUDescriptorHandleForHeapStart();
+	D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = SRVHeapRO->GetInterfacePtr()->GetCPUDescriptorHandleForHeapStart();
 	UINT srvDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
-	device->CreateShaderResourceView(test, &srvDesc, srvHandle);
-	srvHandle.ptr += srvDescriptorSize;
 
 	device->CreateShaderResourceView(*Positions, &srvDesc, srvHandle);
 	srvHandle.ptr += srvDescriptorSize;
@@ -483,6 +512,10 @@ void GeometryPass::InitResources(ID3D12Device5Ptr device)
 
 	device->CreateShaderResourceView(*Specular, &srvDesc, srvHandle);
 	srvHandle.ptr += srvDescriptorSize;
+
+	device->CopyDescriptorsSimple(4, (*SRVHeap)->GetCPUDescriptorHandleForHeapStart(), 
+								  (*SRVHeapRO)->GetCPUDescriptorHandleForHeapStart(), 
+								  D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 	Heaps.PushBack(Globals.SRVHeap);
 	Heaps.PushBack(Globals.CBVHeap);
@@ -604,7 +637,7 @@ void LightingPass::InitResources(ID3D12Device5Ptr device)
 void LightingPass::InitRootSignature()
 {
 	std::vector<D3D12_DESCRIPTOR_RANGE> srvRanges = {
-		DescriptorRangeBuilder::CreateRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5, 0, 0)
+		DescriptorRangeBuilder::CreateRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 0, 0)
 	};
 
 	std::vector<D3D12_DESCRIPTOR_RANGE> samplerRanges = {

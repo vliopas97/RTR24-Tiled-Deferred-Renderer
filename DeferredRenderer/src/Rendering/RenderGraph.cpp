@@ -56,7 +56,7 @@ RenderGraph::RenderGraph(ID3D12Device5Ptr device)
 		pass->SetInput("normals", "lightingPass.normals");
 		pass->SetInput("diffuse", "lightingPass.diffuse");
 		pass->SetInput("specular", "lightingPass.specular");
-		pass->SetInput("srvHeap", "lightingPass.srvHeap");
+		pass->SetInput("srvHeap", "geometryPass.srvHeapRO");
 		Add(pass);
 	}
 

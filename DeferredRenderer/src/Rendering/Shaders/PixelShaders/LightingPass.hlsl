@@ -13,10 +13,10 @@ static const float attConst = 1.0f;
 static const float attLin = 0.05f;
 static const float attQuad = 0.01f;
 
-Texture2D<float4> Positions : register(t1);
-Texture2D<float4> Normals : register(t2);
-Texture2D<float4> Diffuse : register(t3);
-Texture2D<float4> Specular : register(t4);
+Texture2D<float4> Positions : register(t0);
+Texture2D<float4> Normals : register(t1);
+Texture2D<float4> Diffuse : register(t2);
+Texture2D<float4> Specular : register(t3);
 
 float3 calcSpecular(in float3 posView, in float3 lightDir, in float3 normal, in float shininess)
 {

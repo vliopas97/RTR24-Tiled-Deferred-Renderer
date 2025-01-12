@@ -251,6 +251,9 @@ protected:
 	void InitRootSignature() override {}
 	void InitPipelineState() override {}
 private:
+	void GBuffersViewerWindow() const;
+
+private:
 	UniquePtr<ImGuiLayer> Layer;
 
 	SharedPtr<ID3D12ResourcePtr> Positions;
@@ -259,7 +262,7 @@ private:
 	SharedPtr<ID3D12ResourcePtr> Specular;
 
 	SharedPtr<ID3D12DescriptorHeapPtr> SRVHeap{};
-	std::array<D3D12_GPU_DESCRIPTOR_HANDLE, 5> GPUHandlesGBuffers;
+	std::array<D3D12_GPU_DESCRIPTOR_HANDLE, 4> GPUHandlesGBuffers;
 };
 
 class GeometryPass final : public RenderPass
@@ -280,6 +283,7 @@ private:
 	// GBuffers
 	SharedPtr<ID3D12DescriptorHeapPtr> RTVHeap{}; // to be used in this pass as RTVs
 	SharedPtr<ID3D12DescriptorHeapPtr> SRVHeap{}; // to be used in lighting pass as SRVs
+	SharedPtr<ID3D12DescriptorHeapPtr> SRVHeapRO{}; // read only alternative of SRVHeap - to be used for GUI displaying
 	std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 4> RTVHandles{};
 };
 

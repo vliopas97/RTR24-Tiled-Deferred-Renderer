@@ -23,12 +23,18 @@ void ImGuiLayer::OnAttach(ID3D12Device5Ptr device)
 	ImGui::StyleColorsDark();
 
 	D3D12_DESCRIPTOR_HEAP_DESC heapDesc{};
-	heapDesc.NumDescriptors = 1;
+	heapDesc.NumDescriptors = 1 + ((DescriptorHeap) ? DescriptorHeap->GetDesc().NumDescriptors : 0);
 	heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 
-	if (!DescriptorHeap.GetInterfacePtr())
-		GRAPHICS_ASSERT(device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&DescriptorHeap)));
+	auto temp = DescriptorHeap.Detach();
+	GRAPHICS_ASSERT(device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&DescriptorHeap)));
+
+	auto handle = DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	auto tempHandle = temp->GetCPUDescriptorHandleForHeapStart();
+	handle.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+	device->CopyDescriptorsSimple(4, handle, tempHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 	ImGui_ImplWin32_Init(Application::GetApp().GetWindow()->GetHandle());
 	ImGui_ImplDX12_Init(device, 

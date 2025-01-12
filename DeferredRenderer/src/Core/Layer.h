@@ -4,9 +4,8 @@
 
 struct Graphics;
 
-class ImGuiLayer
+struct ImGuiLayer
 {
-public:
 	ImGuiLayer(ID3D12DescriptorHeapPtr descHeap = nullptr);
 	~ImGuiLayer() = default;
 
@@ -17,6 +16,5 @@ public:
 	void Begin();
 	void End(ID3D12GraphicsCommandList4Ptr cmdList);
 
-private:
 	ID3D12DescriptorHeapPtr DescriptorHeap;
 };
