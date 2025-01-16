@@ -20,6 +20,7 @@ namespace
 	auto& FenceValue = Globals.FenceValue;
 
 	auto& CmdQueue = Globals.CmdQueue;
+	auto& CmdList = Globals.CmdList;
 }
 
 Graphics::Graphics(Window& window)
@@ -29,8 +30,8 @@ Graphics::Graphics(Window& window)
 	Init();
 	InitGlobals();
 
-	InitScene();
 	Graph = MakeUnique<RenderGraph>(Device);
+	InitScene();
 }
 
 Graphics::~Graphics()

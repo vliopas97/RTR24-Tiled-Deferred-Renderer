@@ -54,6 +54,7 @@ struct GlobalResources
 
 	ID3D12CommandQueuePtr CmdQueue{};
 	ID3D12CommandAllocatorPtr CmdAllocator{};
+	ID3D12GraphicsCommandList4Ptr CmdList{};
 
 	glm::uvec2 WindowDimensions{1920, 1080};
 

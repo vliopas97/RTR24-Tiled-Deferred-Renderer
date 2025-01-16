@@ -23,7 +23,6 @@ struct Graphics
 
     ID3D12Device5Ptr GetDevice() { return Device; }
     ID3D12CommandAllocatorPtr GetCommandAllocator() { return FrameObjects[SwapChain->GetCurrentBackBufferIndex()].CmdAllocator; }
-    ID3D12GraphicsCommandList4Ptr GetCommandList() { return CmdList; }
 
 private:
 	void Init();
@@ -49,9 +48,7 @@ private:
 	IDXGISwapChain3Ptr SwapChain;
     glm::uvec2 SwapChainSize;
 
-    ID3D12GraphicsCommandList4Ptr CmdList;
-
-    UniquePtr<RenderGraph> Graph;
+        UniquePtr<RenderGraph> Graph;
     UniquePtr<Scene> MainScene;
 
     struct
