@@ -20,11 +20,24 @@ Texture::Texture(ID3D12Device5Ptr device, ID3D12CommandQueuePtr CmdQueue, D3D12_
     ResourceUploadBatch resourceUpload(device);
     resourceUpload.Begin();
 
+    bool isNormalMap = filename.find("ddn") != std::string::npos ||
+        filename.find("NRM") != std::string::npos;
+    bool isPNG = filename.find(".png") != std::string::npos;
+
+    DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+    if (isNormalMap)
+    {
+        if (!isPNG || filename.find("arch_ddn") != std::string::npos)
+            format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        else
+            format = DXGI_FORMAT_B8G8R8A8_UNORM;
+    }
+
     auto resDesc = CD3DX12_RESOURCE_DESC(
         D3D12_RESOURCE_DIMENSION_TEXTURE2D,
         D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT,
-        GetWidth(), GetHeight(), 1, 5,
-        DXGI_FORMAT_R8G8B8A8_UNORM,
+        GetWidth(), GetHeight(), 1, isNormalMap ? 1 : 5,
+        format,
         1, 0,
         D3D12_TEXTURE_LAYOUT_UNKNOWN, D3D12_RESOURCE_FLAG_NONE);
     
@@ -40,7 +53,7 @@ Texture::Texture(ID3D12Device5Ptr device, ID3D12CommandQueuePtr CmdQueue, D3D12_
     srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
     srvDesc.Format = resDesc.Format;
     srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-    srvDesc.Texture2D.MipLevels = 5;
+    srvDesc.Texture2D.MipLevels = isNormalMap ? 1 : 5;
 
     device->CreateShaderResourceView(TextureResource, &srvDesc, destDescriptor);
 
@@ -48,17 +61,21 @@ Texture::Texture(ID3D12Device5Ptr device, ID3D12CommandQueuePtr CmdQueue, D3D12_
     D3D12_SUBRESOURCE_DATA textureData = { Image.GetPixels(), Image.GetImage(0, 0, 0)->rowPitch, 0};
     resourceUpload.Upload(TextureResource, 0, &textureData, 1);
 
-    resourceUpload.Transition(
-        TextureResource,
-        D3D12_RESOURCE_STATE_COPY_DEST,
-        D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    if (!isNormalMap)
+    {
+        resourceUpload.Transition(
+            TextureResource,
+            D3D12_RESOURCE_STATE_COPY_DEST,
+            D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE  );
 
-    resourceUpload.GenerateMips(TextureResource);
+        resourceUpload.GenerateMips(TextureResource );
 
-    resourceUpload.Transition(
-        TextureResource,
-        D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-        D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
+        resourceUpload.Transition(
+            TextureResource,
+            D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+            D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
+
+    }
 
     auto uploadResourcesFinished = resourceUpload.End(CmdQueue);
     uploadResourcesFinished.wait();

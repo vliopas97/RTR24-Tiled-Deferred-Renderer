@@ -19,14 +19,12 @@ float3 normalPreprocess(float3 n, float3x3 TBN, float2 texCoords)
     
     if (ID < 0)
         return normalize(-1.0f * n); // if no normal map available
-    
+        
     Texture2D<float4> normalMap = getTexture(ID);
-    const float3 normalSample = normalMap.Sample(smplr, texCoords).xyz;
-    
+    float3 normalSample = normalMap.Sample(smplr, texCoords).xyz;
     n = 2.0f * normalSample.xyz - 1.0f;
     n.xz = -n.xz;
     n = mul(TBN, n);
-    
     return normalize(n);
 }
 

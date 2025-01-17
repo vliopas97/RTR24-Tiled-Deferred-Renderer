@@ -8,7 +8,7 @@
 #include <iostream>
 
 Scene::Scene(ID3D12Device5Ptr device, const Camera& camera)
-	:Device(device), DebugMode(true)
+	:Device(device), DebugMode(false)
 {
 	FilesLocation = std::filesystem::current_path().parent_path().string()
 		+ std::string(DebugMode ? "\\Content\\Model\\Nanosuit\\" : "\\Content\\Model\\Sponza\\");

@@ -22,6 +22,10 @@ float2 texCoords : TEXCOORD)
     tangent = mul((float3x3) modelView, tangent);
     bitangent = mul((float3x3) modelView, bitangent);
     
+    normal = normalize(normal);
+    tangent = normalize(tangent);
+    bitangent = normalize(bitangent);
+    
     flipNormalForBackfaces(normal, posView);
     result.normal = normal;
     

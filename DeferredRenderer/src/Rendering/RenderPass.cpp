@@ -742,14 +742,13 @@ void AmbientOcclusionPass::InitResources(ID3D12Device5Ptr device)
 		};
 
 	std::srand(static_cast<unsigned int>(std::time(nullptr)));
-	std::array<float, 192> noiseTextureFloats;
+	std::array<glm::float3, 64> noiseTextureFloats;
 
 	for (int i = 0; i < 64; i++)
 	{
-		int index = i * 3;
-		noiseTextureFloats[index] = randRange(-1.0f, 1.0f);    
-		noiseTextureFloats[index + 1] = randRange(-1.0f, 1.0f);
-		noiseTextureFloats[index + 2] = 0.0f;                  
+		noiseTextureFloats[i].x = randRange(-1.0f, 1.0f);    
+		noiseTextureFloats[i].y = randRange(-1.0f, 1.0f);
+		noiseTextureFloats[i].z = 0.0f;                  
 	}
 
 	// Create Random Texture
@@ -782,7 +781,7 @@ void AmbientOcclusionPass::InitResources(ID3D12Device5Ptr device)
 
 	D3D12_SUBRESOURCE_DATA textureData{};
 	textureData.pData = noiseTextureFloats.data();
-	textureData.RowPitch = resDesc.Width * sizeof(float);
+	textureData.RowPitch = resDesc.Width * sizeof(glm::float3);
 	textureData.SlicePitch = textureData.RowPitch * resDesc.Height;
 
 	UpdateSubresources(cmdList, *RandomTexture, stagingBufferRandTex, 0, 0, 1, &textureData);
