@@ -12,7 +12,7 @@
 #include "Rendering/Resources.h"
 #include "Rendering/RenderGraph.h"
 
-class ImGuiLayer;
+struct ImGuiLayer;
 
 struct Graphics
 {

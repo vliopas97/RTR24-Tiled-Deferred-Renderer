@@ -38,12 +38,19 @@ RenderGraph::RenderGraph(ID3D12Device5Ptr device)
 		pass->SetInput("depthBuffer", "clear.depthBuffer");
 		Add(pass);
 	}
+	// Ambient Occlusion Pass
+	{
+		auto pass = MakeUnique<AmbientOcclusionPass>("ambientOcclusion");
+		pass->SetInput("normals", "geometryPass.normals");
+		pass->SetInput("depthBuffer", "geometryPass.depthBuffer");
+		Add(pass);
+	}
 	// Lighting Pass
 	{
 		auto pass = MakeUnique<LightingPass>("lightingPass");
 		pass->SetInput("renderTarget", "clear.renderTarget");
 		pass->SetInput("positions", "geometryPass.positions");
-		pass->SetInput("normals", "geometryPass.normals");
+		pass->SetInput("normals", "ambientOcclusion.normals");
 		pass->SetInput("diffuse", "geometryPass.diffuse");
 		pass->SetInput("specular", "geometryPass.specular");
 		pass->SetInput("srvHeap", "geometryPass.srvHeap");

@@ -10,6 +10,7 @@ typedef uint UINT;
 typedef uint2 uvec2;
 typedef uint3 uvec3;
 typedef uint4 uvec4;
+typedef int BOOL;
 
 #define ALIGNAS(x)
 
@@ -25,6 +26,7 @@ struct PipelineConstants
 	vec3 CameraPosition;
 	ALIGNAS(16) mat4x4 View;
 	mat4x4 ViewProjection;
+	mat4x4 Projection;
 };
 
 struct ALIGNAS(16) MaterialData
@@ -51,6 +53,11 @@ struct DirLightData
 	ALIGNAS(16) vec3 Ambient;
 	ALIGNAS(16) vec3 DiffuseColor;
 	float DiffuseIntensity;
+};
+
+struct BlurPassControls
+{
+	BOOL IsHorizontal;
 };
 
 #endif // HLSLCOMPAT_H

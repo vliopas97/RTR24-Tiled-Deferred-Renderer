@@ -200,6 +200,7 @@ inline void Graphics::UpdateGlobals(UINT frameIndex, float delta)
 	CBGlobalConstants.CPUData.CameraPosition = SceneCamera.GetPosition();
 	CBGlobalConstants.CPUData.View = SceneCamera.GetView();
 	CBGlobalConstants.CPUData.ViewProjection = SceneCamera.GetViewProjection();
+	CBGlobalConstants.CPUData.Projection = SceneCamera.GetProjection();
 
 	GlobalResManager::SetRTV(FrameObjects[frameIndex].SwapChainBuffer, FrameObjects[frameIndex].RTVHandle);
 	GlobalResManager::SetDSV(FrameObjects[frameIndex].DepthStencilBuffer, FrameObjects[frameIndex].DSVHandle);
