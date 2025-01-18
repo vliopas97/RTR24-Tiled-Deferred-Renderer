@@ -28,6 +28,8 @@ struct PipelineConstants
 	mat4x4 ViewProjection;
 	mat4x4 Projection;
 	BOOL SSAOEnabled;
+	float RadiusSSAO;
+	float IntensitySSAO;
 };
 
 struct ALIGNAS(16) MaterialData

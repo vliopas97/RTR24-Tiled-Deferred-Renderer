@@ -368,11 +368,11 @@ void GUIPass::GBuffersViewerWindow() const
 	const char* items[] = {
 		"Positions (View Space)",
 		"Normals (View Space)",
-		"Albedo",
+		"Diffuse",
 		"Specular"
 	};
 
-	static int selectedItem = 0;
+	static int selectedItem = 1;
 
 	// Dropdown
 	if (ImGui::Combo("Select Texture", &selectedItem, items, IM_ARRAYSIZE(items)))
@@ -385,6 +385,8 @@ void GUIPass::GBuffersViewerWindow() const
 
 	if (ImGui::Checkbox("Enable SSAO", &checkboxState))
 		ssaoEnabled = checkboxState ? 1 : 0;
+	ImGui::SliderFloat("SSAO Radius", &Globals.CBGlobalConstants.CPUData.RadiusSSAO, 0.01f, 2.0f, "%.02f");
+	ImGui::SliderFloat("SSAO Intensity", &Globals.CBGlobalConstants.CPUData.IntensitySSAO, 0.5f, 4.0f, "%.1f");
 
 	ImGui::Text("Ambient Occlusion: ");
 	ImGui::Image((ImTextureID)GPUHandlesGBuffers[4].ptr, imageSize);

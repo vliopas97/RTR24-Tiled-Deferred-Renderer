@@ -44,7 +44,7 @@ private:
 	uint32_t Width, Height;
 
 	EventCallbackFn EventCallback;
-	bool CursorVisibility = false;
+	bool CursorVisibility = true;
 
 };
 

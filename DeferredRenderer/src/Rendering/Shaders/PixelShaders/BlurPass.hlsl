@@ -5,44 +5,24 @@ Texture2D TextureToBlur : register(t0);
 SamplerState smplr : register(s0);
 ConstantBuffer<BlurPassControls> Controls : register(b0);
 
-static const uint kernelSize = 15;
+static const uint kernelSize = 5;
 
 static const float offsets[kernelSize] =
 {
-    -7,
-    -6,
-    -5,
-    -4,
-    -3,
     -2,
     -1,
     0,
     1,
-    2,
-    3,
-    4,
-    5,
-    6,
-    7
+    2
 };
 
 static const float weights[kernelSize] =
 {
-    0.009032585254438357,
-    0.018475821052165713,
-    0.03385119150683613,
-    0.05555529465395964,
-    0.08167005483822282,
-    0.10754484603742742,
-    0.12685407401442889,
-    0.13403226528504197,
-    0.12685407401442889,
-    0.10754484603742742,
-    0.08167005483822282,
-    0.05555529465395964,
-    0.03385119150683613,
-    0.018475821052165713,
-    0.009032585254438357
+    0.15338835280702454,
+    0.22146110682534667,
+    0.2503010807352574,
+    0.22146110682534667,
+    0.15338835280702454
 };
 
 float4 main(float4 position : SV_Position) : SV_Target

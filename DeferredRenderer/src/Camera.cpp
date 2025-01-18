@@ -3,6 +3,10 @@
 
 #include <algorithm>
 #include <numbers>
+#include <filesystem>
+#include <fstream>
+#include <sstream>
+#include <iostream>
 
 template<typename T>
 static T wrap_angle(T theta) noexcept
@@ -19,6 +23,97 @@ static T wrap_angle(T theta) noexcept
 	}
 	return mod;
 }
+
+void SaveStateToFile(const std::string& filename, glm::vec3 position, glm::vec3 rotation)
+{
+	auto path = std::filesystem::current_path().parent_path().string() + "\\Content\\" + filename;
+
+	static std::ofstream file;
+	static bool init = true;
+
+	if (init)
+	{
+		file.open(path, std::ios::out | std::ios::app);
+		init = false;
+	}
+
+	if (file.is_open())
+	{
+		file << "Position: " << position.x << " " << position.y << " " << position.z << "\n";
+		file << "Rotation: " << rotation.x << " " << rotation.y << " " << rotation.z << "\n";
+		file.flush();
+		std::cout << "Camera state saved to " << filename << std::endl;
+	}
+	else
+	{
+		std::cerr << "Failed to open file for saving: " << filename << std::endl;
+	}
+}
+
+void LoadStateFromFile(const std::string& filename, glm::vec3& position, glm::vec3& rotation)
+{
+	// Build the file path
+	auto path = std::filesystem::current_path().parent_path().string() + "\\Content\\" + filename;
+
+	static std::ifstream file(path);
+	static bool init = true;
+
+	if (init)
+	{
+		file.open(path, std::ios::out | std::ios::app);
+		init = false;
+	}
+
+	static std::string fileContents((std::istreambuf_iterator<char>(file)),
+							 std::istreambuf_iterator<char>());
+
+	file.close(); // File is no longer needed
+
+	static std::istringstream iss(fileContents);
+	std::string line;
+
+	static bool readPosition = false;
+    static bool readRotation = false;
+
+    if (!readPosition)
+    {
+        std::getline(iss, line);
+        std::istringstream lineStream(line);
+        std::string type;
+
+        if (lineStream >> type && type == "Position:")
+        {
+            if (!(lineStream >> position.x >> position.y >> position.z))
+            {
+                std::cerr << "Failed to parse Position values on line: " << line << '\n';
+            }
+            readPosition = true;
+        }
+    }
+
+    if (readPosition && !readRotation)
+    {
+        std::getline(iss, line);
+        std::istringstream lineStream(line);
+        std::string type;
+
+        if (lineStream >> type && type == "Rotation:")
+        {
+            if (!(lineStream >> rotation.x >> rotation.y >> rotation.z))
+            {
+                std::cerr << "Failed to parse Rotation values on line: " << line << '\n';
+            }
+            readRotation = true;
+        }
+    }
+
+    if (readPosition && readRotation)
+    {
+        readPosition = false;
+        readRotation = false;
+    }
+}
+
 
 Camera::Camera()
 	:FovY(2.0f), AspectRatio(16.0f / 9.0f), NearZ(0.2f), FarZ(400.0f),
@@ -44,8 +139,16 @@ void Camera::SetRotation(const glm::vec3& rotation)
 
 void Camera::Tick(float delta)
 {
-
 	auto& input = Application::GetApp().GetWindow()->Input;
+
+	static bool startup = true;
+	if (startup)
+	{
+		LoadStateFromFile("cameraPath.txt", Position, Rotation);
+		UpdateViewMatrix();
+		if (!Application::GetApp().GetWindow()->IsCursorVisible())
+			startup = false;
+	}
 
 	glm::vec3 cameraPosition{ 0.0f };
 	if (input.IsKeyPressed(0x57)) cameraPosition.z = delta;
@@ -89,4 +192,6 @@ void Camera::UpdateViewMatrix()
 
 	View = glm::lookAtLH(Position, Position + directionVector, glm::vec3(0, 1, 0));
 	ViewProjection = Projection * View;
+
+	//SaveStateToFile("cameraPath.txt", Position, Rotation);
 }

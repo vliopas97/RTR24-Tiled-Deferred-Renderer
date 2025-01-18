@@ -30,8 +30,8 @@ float4 main(float4 position : SV_Position) : SV_TARGET
     float3x3 TBN = float3x3(tangent, bitangent, normal);
     
     float occlusion = 0.0f;
-    float radius = 0.05f;
-    float power = 1.0f;
+    float radius = globalConstants.RadiusSSAO;
+    float intensity = globalConstants.IntensitySSAO;
     
     for (int i = 0; i < 16; i++)
     {
@@ -49,7 +49,7 @@ float4 main(float4 position : SV_Position) : SV_TARGET
     }
     
     occlusion = 1.0f - (occlusion / 16.0f); // kernel size
-    float occlusionOut = pow(occlusion, power);
+    float occlusionOut = pow(occlusion, intensity);
     
     return float4(float3(occlusionOut, occlusionOut, occlusionOut), 1.0f);
 }

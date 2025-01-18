@@ -20,6 +20,8 @@ RenderGraph::RenderGraph(ID3D12Device5Ptr device)
 	RTVBuffer = MakeShared<ID3D12ResourcePtr>(Globals.RTVBuffer);
 	DSVBuffer = MakeShared<ID3D12ResourcePtr>(Globals.DSVBuffer);
 	Globals.CBGlobalConstants.CPUData.SSAOEnabled = true;
+	Globals.CBGlobalConstants.CPUData.RadiusSSAO = 0.15f;
+	Globals.CBGlobalConstants.CPUData.IntensitySSAO = 2.0f;
 
 	GraphInputs.emplace_back(MakeUnique<PassOutput<ID3D12ResourcePtr>>("renderTarget", RTVBuffer, D3D12_RESOURCE_STATE_PRESENT));
 	GraphInputs.emplace_back(MakeUnique<PassOutput<ID3D12ResourcePtr>>("depthBuffer", DSVBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE));
