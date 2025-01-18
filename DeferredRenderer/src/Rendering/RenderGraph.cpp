@@ -45,6 +45,18 @@ RenderGraph::RenderGraph(ID3D12Device5Ptr device)
 		pass->SetInput("depthBuffer", "geometryPass.depthBuffer");
 		Add(pass);
 	}
+	// Horizontal Blur Pass
+	{
+		auto pass = MakeUnique<HorizontalBlurPass>("horizontalBlur");
+		pass->SetInput("processedResource", "ambientOcclusion.renderTarget");
+		Add(pass);
+	}
+	// Vertical Blur Pass
+	{
+		auto pass = MakeUnique<VerticalBlurPass>("verticalBlur");
+		pass->SetInput("processedResource", "horizontalBlur.renderTarget");
+		Add(pass);
+	}
 	// Lighting Pass
 	{
 		auto pass = MakeUnique<LightingPass>("lightingPass");

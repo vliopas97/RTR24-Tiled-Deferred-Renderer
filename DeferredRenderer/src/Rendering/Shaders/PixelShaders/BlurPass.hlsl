@@ -1,46 +1,49 @@
 #define HLSL
 #include "..\HLSLCompat.h"
 
-Texture2D SceneTexture : register(t0);
+Texture2D TextureToBlur : register(t0);
 SamplerState smplr : register(s0);
 ConstantBuffer<BlurPassControls> Controls : register(b0);
 
-float4 main(float2 texCoords : TEXCOORD) : SV_Target
+static const float offsets[5] =
 {
-    const float offset[5] = { 0.0, 1.0, 2.0, 3.0, 4.0 };
-    const float weight[5] =
-    {
-        0.2270270270, 0.1945945946, 0.1216216216,
-        0.0540540541, 0.0162162162
-    };
+    -3.4048471718931532,
+    -1.4588111840004858,
+    0.48624268466894843,
+    2.431625915613778,
+    4
+};
+
+static const float weights[5] =
+{
+    0.15642123799829394,
+    0.26718801880015064,
+    0.29738065394682034,
+    0.21568339342709997,
+    0.06332669582763516
+};
+
+
+float4 main(float4 position : SV_Position) : SV_Target
+{
+    uint width, height, noMips;
+    TextureToBlur.GetDimensions(0, width, height, noMips);
+    uint2 screenSize = uint2(width, height);
     
+    // Calculate normalized texture coordinates
+    float2 texCoords = float2(position.x / width, position.y / height);
+    
+    // Determine the direction of the blur based on the Controls structure
     float2 dir = Controls.IsHorizontal ? float2(1.0f, 0.0f) : float2(0.0f, 1.0f);
 
-    float4 output = SceneTexture.Sample(smplr, texCoords) * weight[0];
-    float3 FragmentColor = float3(0.0, 0.0, 0.0);
-
-    for (int i = 1; i < 5; i++)
+    float4 output = float4(0.0f, 0.0f, 0.0f, 0.0f);
+    
+    for (int i = 0; i < 5; i++)
     {
-        FragmentColor += SceneTexture.Sample(smplr,
-                        texCoords + float2(dir.x * offset[i], dir.y * offset[i])).rgb * weight[i];
-        FragmentColor += SceneTexture.Sample(smplr,
-                        texCoords - float2(dir.x * offset[i], dir.y * offset[i])).rgb * weight[i];
+        float2 offset = dir * offsets[i] / screenSize;
+        float weight = weights[i];
+        output += TextureToBlur.Sample(smplr, texCoords + offset) * weight;
     }
-
-    output.rgb += FragmentColor;
-
-    return float4(output.rgb, 1.0);
     
-    //float accAlpha = 0.0f;
-    //float3 maxColor = float3(0.0f, 0.0f, 0.0f);
-    
-    //for (int i = 0; i < 5; i++)
-    //{
-    //    const float2 tc = texCoords + float2(dir.x * i, dir.y * i);
-    //    const float4 s = SceneTexture.Sample(smplr, tc).rgba;
-    //    const float coef = coefficients[i];
-    //    accAlpha += s.a * coef;
-    //    maxColor = max(s.rgb, maxColor);
-    //}
-    //return float4(maxColor, accAlpha);
+    return output;
 }
