@@ -34,7 +34,8 @@ void ImGuiLayer::OnAttach(ID3D12Device5Ptr device)
 	auto tempHandle = temp->GetCPUDescriptorHandleForHeapStart();
 	handle.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-	device->CopyDescriptorsSimple(4, handle, tempHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	if(temp)
+		device->CopyDescriptorsSimple(temp->GetDesc().NumDescriptors, handle, tempHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 	ImGui_ImplWin32_Init(Application::GetApp().GetWindow()->GetHandle());
 	ImGui_ImplDX12_Init(device, 

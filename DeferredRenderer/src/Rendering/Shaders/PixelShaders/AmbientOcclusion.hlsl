@@ -30,8 +30,8 @@ float4 main(float4 position : SV_Position) : SV_TARGET
     float3x3 TBN = float3x3(tangent, bitangent, normal);
     
     float occlusion = 0.0f;
-    float radius = 0.5f;
-    float power = 1.5f;
+    float radius = 0.05f;
+    float power = 1.0f;
     
     for (int i = 0; i < 16; i++)
     {

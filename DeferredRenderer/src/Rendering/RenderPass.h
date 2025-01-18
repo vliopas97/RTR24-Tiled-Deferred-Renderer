@@ -261,8 +261,10 @@ private:
 	SharedPtr<ID3D12ResourcePtr> Diffuse;
 	SharedPtr<ID3D12ResourcePtr> Specular;
 
+	SharedPtr<ID3D12ResourcePtr> AmbientOcclusion;
+
 	SharedPtr<ID3D12DescriptorHeapPtr> SRVHeap{};
-	std::array<D3D12_GPU_DESCRIPTOR_HANDLE, 4> GPUHandlesGBuffers;
+	std::array<D3D12_GPU_DESCRIPTOR_HANDLE, 5> GPUHandlesGBuffers;
 };
 
 class GeometryPass final : public RenderPass
@@ -332,6 +334,7 @@ class BlurPass : public RenderPass
 {
 public:
 	virtual void Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene) override;
+	virtual ~BlurPass() = default;
 protected:
 	BlurPass(std::string&& name);
 	virtual void InitResources(ID3D12Device5Ptr device) override;

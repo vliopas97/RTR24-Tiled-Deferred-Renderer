@@ -58,7 +58,6 @@ void Application::OnEvent(Event& e)
 	if (MainWindow && GraphicsInterface)
 	{
 		MainWindow->OnEvent(e);
-		GraphicsInterface->GetImGui()->OnEvent(e);
 	}
 }
 

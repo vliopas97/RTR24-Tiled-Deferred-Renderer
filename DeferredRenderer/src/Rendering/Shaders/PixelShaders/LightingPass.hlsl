@@ -65,7 +65,9 @@ float4 main(float4 position : SV_Position) : SV_TARGET
     : getSpecularFromTexture(posView.xyz, lightDir, normal, matSpecular);
     
     float4 occlusion = AmbientOcclusion.Sample(smplr, texCoords);
-    return float4(occlusion.xyz, 1.0f);
+    
+    if (globalConstants.SSAOEnabled)
+        return float4(saturate(diffuse + Sun.Ambient) * matDiffuse.rgb + attLin * specular, 1.0f) * occlusion;
     
     return float4(saturate(diffuse + Sun.Ambient) * matDiffuse.rgb + attLin * specular, 1.0f);
 }

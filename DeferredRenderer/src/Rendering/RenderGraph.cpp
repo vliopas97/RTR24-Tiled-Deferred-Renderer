@@ -19,6 +19,7 @@ RenderGraph::RenderGraph(ID3D12Device5Ptr device)
 {
 	RTVBuffer = MakeShared<ID3D12ResourcePtr>(Globals.RTVBuffer);
 	DSVBuffer = MakeShared<ID3D12ResourcePtr>(Globals.DSVBuffer);
+	Globals.CBGlobalConstants.CPUData.SSAOEnabled = true;
 
 	GraphInputs.emplace_back(MakeUnique<PassOutput<ID3D12ResourcePtr>>("renderTarget", RTVBuffer, D3D12_RESOURCE_STATE_PRESENT));
 	GraphInputs.emplace_back(MakeUnique<PassOutput<ID3D12ResourcePtr>>("depthBuffer", DSVBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE));
@@ -77,6 +78,7 @@ RenderGraph::RenderGraph(ID3D12Device5Ptr device)
 		pass->SetInput("diffuse", "lightingPass.diffuse");
 		pass->SetInput("specular", "lightingPass.specular");
 		pass->SetInput("srvHeap", "geometryPass.srvHeapRO");
+		pass->SetInput("ambientOcclusion", "lightingPass.ambientOcclusion");
 		Add(pass);
 	}
 
