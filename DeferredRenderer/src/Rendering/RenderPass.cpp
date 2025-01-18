@@ -663,7 +663,7 @@ void LightingPass::InitRootSignature()
 
 void LightingPass::InitPipelineState()
 {
-	Shader<Vertex> vertexShader("LightingPass");
+	Shader<Vertex> vertexShader("FullScreenTriangle");
 	Shader<Pixel> pixelShader("LightingPass");
 
 	D3D12_INPUT_LAYOUT_DESC layoutDesc{};
@@ -955,7 +955,7 @@ void AmbientOcclusionPass::InitRootSignature()
 
 void AmbientOcclusionPass::InitPipelineState()
 {
-	Shader<Vertex> vertexShader("AmbientOcclusion");
+	Shader<Vertex> vertexShader("FullScreenTriangle");
 	Shader<Pixel> pixelShader("AmbientOcclusion");
 
 	D3D12_INPUT_LAYOUT_DESC layoutDesc{};

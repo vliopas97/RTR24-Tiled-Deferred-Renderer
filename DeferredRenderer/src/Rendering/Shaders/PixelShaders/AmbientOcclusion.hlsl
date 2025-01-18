@@ -45,19 +45,21 @@ float3 ComputePositionViewFromZ(uint2 screenSize, uint2 coords, float zbuffer)
     return positionView;
 }
 
-float4 main(PSInput input) : SV_TARGET
+float4 main(float4 position : SV_Position) : SV_TARGET
 {
     uint width, height, noMips;
     Normals.GetDimensions(0, width, height, noMips);
     uint2 screenSize = uint2(width, height);
+    
+    float2 texCoords = float2(position.x / width, position.y / height);
 
-    float centerZBuffer = Depth.Sample(smplr, input.texCoords).r;
-    float3 centerDepthPos = ComputePositionViewFromZ(screenSize, uint2(input.positionViewport.xy), centerZBuffer);
-    float3 normal = DecodeSphereMap(Normals.Sample(smplr, input.texCoords).xy);
+    float centerZBuffer = Depth.Sample(smplr, texCoords).r;
+    float3 centerDepthPos = ComputePositionViewFromZ(screenSize, uint2(position.xy), centerZBuffer);
+    float3 normal = DecodeSphereMap(Normals.Sample(smplr, texCoords).xy);
     
     float2 noiseScale = float2(width / 8.0f, height / 8.0f);
     
-    float3 randomVector = RandomTexture.Sample(smplr, input.texCoords * noiseScale).xyz;
+    float3 randomVector = RandomTexture.Sample(smplr, texCoords * noiseScale).xyz;
     float3 tangent = normalize(randomVector - normal * dot(randomVector, normal));
     float3 bitangent = cross(normal, tangent);
     float3x3 transformMat = float3x3(tangent, bitangent, normal);
