@@ -302,8 +302,10 @@ private:
 	SharedPtr<ID3D12ResourcePtr> Normals;
 	SharedPtr<ID3D12ResourcePtr> Diffuse;
 	SharedPtr<ID3D12ResourcePtr> Specular;
+	SharedPtr<ID3D12ResourcePtr> AmbientOcclusion;
 
-	SharedPtr<ID3D12DescriptorHeapPtr> SRVHeap{};
+	SharedPtr<ID3D12DescriptorHeapPtr> GBufferHeap{};
+	ID3D12DescriptorHeapPtr AOHeap;
 };
 
 class AmbientOcclusionPass final : public RenderPass
@@ -319,6 +321,7 @@ private:
 	SharedPtr<ID3D12ResourcePtr> RandomTexture;
 	SharedPtr<ID3D12ResourcePtr> SSAOKernel;
 	SharedPtr<ID3D12ResourcePtr> Normals;
+	SharedPtr<ID3D12ResourcePtr> Positions;
 
 	SharedPtr<ID3D12DescriptorHeapPtr> SRVHeap{};
 	SharedPtr<ID3D12DescriptorHeapPtr> RTVHeap{};

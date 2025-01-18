@@ -593,14 +593,16 @@ LightingPass::LightingPass(std::string&& name)
 	Register<PassInput<ID3D12ResourcePtr>>("normals", Normals, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	Register<PassInput<ID3D12ResourcePtr>>("diffuse", Diffuse, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	Register<PassInput<ID3D12ResourcePtr>>("specular", Specular, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	Register<PassInput<ID3D12DescriptorHeapPtr>>("srvHeap", SRVHeap);
+	Register<PassInput<ID3D12ResourcePtr>>("ambientOcclusion", AmbientOcclusion, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	Register<PassInput<ID3D12DescriptorHeapPtr>>("srvHeap", GBufferHeap);
 
 	Register<PassOutput<ID3D12ResourcePtr>>("renderTarget", RTVBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
 	Register<PassOutput<ID3D12ResourcePtr>>("positions", Positions, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	Register<PassOutput<ID3D12ResourcePtr>>("normals", Normals, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	Register<PassOutput<ID3D12ResourcePtr>>("diffuse", Diffuse, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	Register<PassOutput<ID3D12ResourcePtr>>("specular", Specular, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	Register<PassOutput<ID3D12DescriptorHeapPtr>>("srvHeap", SRVHeap);
+	Register<PassOutput<ID3D12ResourcePtr>>("ambientOcclusion", AmbientOcclusion, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	Register<PassOutput<ID3D12DescriptorHeapPtr>>("srvHeap", GBufferHeap);
 }
 
 void LightingPass::Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene)
@@ -629,7 +631,20 @@ void LightingPass::Bind(ID3D12GraphicsCommandList4Ptr cmdList) const
 
 void LightingPass::InitResources(ID3D12Device5Ptr device)
 {
-	Heaps.PushBack(*SRVHeap);
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
+	srvDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MipLevels = 1;
+	srvDesc.Texture2D.MostDetailedMip = 0;
+	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+
+	AOHeap = D3D::CreateDescriptorHeap(device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
+	D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = AOHeap->GetCPUDescriptorHandleForHeapStart();
+	device->CreateShaderResourceView(*AmbientOcclusion, &srvDesc, srvHandle);
+
+	Heaps.PushBack(*GBufferHeap);
+	Heaps.PushBack(AOHeap);
 	Heaps.PushBack(Globals.SamplerHeap);
 	Heaps.PushBack(Globals.LightsHeap);
 	Heaps.PushBack(Globals.CBVHeap);
@@ -640,6 +655,11 @@ void LightingPass::InitRootSignature()
 	std::vector<D3D12_DESCRIPTOR_RANGE> srvRanges = {
 		DescriptorRangeBuilder::CreateRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 0, 0)
 	};
+	RootSignatureData.AddDescriptorTable(srvRanges, D3D12_SHADER_VISIBILITY_PIXEL);
+
+	srvRanges.clear();
+	srvRanges.emplace_back(DescriptorRangeBuilder::CreateRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 4, 0));
+	RootSignatureData.AddDescriptorTable(srvRanges, D3D12_SHADER_VISIBILITY_PIXEL);
 
 	std::vector<D3D12_DESCRIPTOR_RANGE> samplerRanges = {
 		DescriptorRangeBuilder::CreateRange(D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, 1, 0)
@@ -653,7 +673,6 @@ void LightingPass::InitRootSignature()
 	for (uint32_t i = 0; i < NumGlobalCBVDescriptorRanges; ++i)
 		cbvRanges.emplace_back(DescriptorRangeBuilder::CreateRange(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, UINT_MAX, 0, i));
 
-	RootSignatureData.AddDescriptorTable(srvRanges, D3D12_SHADER_VISIBILITY_PIXEL);
 	RootSignatureData.AddDescriptorTable(samplerRanges, D3D12_SHADER_VISIBILITY_PIXEL);
 	RootSignatureData.AddDescriptorTable(lightRanges, D3D12_SHADER_VISIBILITY_PIXEL);
 	RootSignatureData.AddDescriptorTable(cbvRanges, D3D12_SHADER_VISIBILITY_PIXEL);
@@ -698,9 +717,9 @@ void LightingPass::InitPipelineState()
 AmbientOcclusionPass::AmbientOcclusionPass(std::string&& name)
 	:RenderPass(std::move(name))
 {
-	Register<PassInput<ID3D12ResourcePtr>>("depthBuffer", DSVBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	Register<PassInput<ID3D12ResourcePtr>>("positions", Positions, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	Register<PassInput<ID3D12ResourcePtr>>("normals", Normals, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	Register<PassOutput<ID3D12ResourcePtr>>("depthBuffer", DSVBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+	Register<PassOutput<ID3D12ResourcePtr>>("positions", Positions, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	Register<PassOutput<ID3D12ResourcePtr>>("normals", Normals, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	Register<PassOutput<ID3D12ResourcePtr>>("renderTarget", RTVBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
 }
@@ -885,7 +904,7 @@ void AmbientOcclusionPass::InitResources(ID3D12Device5Ptr device)
 	// SRV Heap
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	srvDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
 	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 	srvDesc.Texture2D.MipLevels = 1;
 	srvDesc.Texture2D.MostDetailedMip = 0;
@@ -897,7 +916,7 @@ void AmbientOcclusionPass::InitResources(ID3D12Device5Ptr device)
 	D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = SRVHeap->GetInterfacePtr()->GetCPUDescriptorHandleForHeapStart();
 	UINT srvDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-	device->CreateShaderResourceView(*DSVBuffer, &srvDesc, srvHandle);
+	device->CreateShaderResourceView(*Positions, &srvDesc, srvHandle);
 	srvHandle.ptr += srvDescriptorSize;
 
 	srvDesc.Format = DXGI_FORMAT_R32G32B32_FLOAT;

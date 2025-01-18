@@ -17,6 +17,7 @@ Texture2D<float4> Positions : register(t0);
 Texture2D<float4> Normals : register(t1);
 Texture2D<float4> Diffuse : register(t2);
 Texture2D<float4> Specular : register(t3);
+Texture2D<float4> AmbientOcclusion : register(t4);
 
 float3 calcSpecular(in float3 posView, in float3 lightDir, in float3 normal, in float shininess)
 {
@@ -62,6 +63,9 @@ float4 main(float4 position : SV_Position) : SV_TARGET
     float3 diffuse = Sun.DiffuseColor * Sun.DiffuseIntensity * 1.0f * max(0.0f, dot(lightDir, normal));
     float3 specular = length(matSpecular.xyz) == 0.0f ? calcSpecular(posView.xyz, lightDir, normal, matSpecular.a) 
     : getSpecularFromTexture(posView.xyz, lightDir, normal, matSpecular);
+    
+    float4 occlusion = AmbientOcclusion.Sample(smplr, texCoords);
+    return float4(occlusion.xyz, 1.0f);
     
     return float4(saturate(diffuse + Sun.Ambient) * matDiffuse.rgb + attLin * specular, 1.0f);
 }

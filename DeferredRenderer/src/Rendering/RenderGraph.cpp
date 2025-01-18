@@ -42,7 +42,7 @@ RenderGraph::RenderGraph(ID3D12Device5Ptr device)
 	{
 		auto pass = MakeUnique<AmbientOcclusionPass>("ambientOcclusion");
 		pass->SetInput("normals", "geometryPass.normals");
-		pass->SetInput("depthBuffer", "geometryPass.depthBuffer");
+		pass->SetInput("positions", "geometryPass.positions");
 		Add(pass);
 	}
 	// Horizontal Blur Pass
@@ -61,10 +61,11 @@ RenderGraph::RenderGraph(ID3D12Device5Ptr device)
 	{
 		auto pass = MakeUnique<LightingPass>("lightingPass");
 		pass->SetInput("renderTarget", "clear.renderTarget");
-		pass->SetInput("positions", "geometryPass.positions");
+		pass->SetInput("positions", "ambientOcclusion.positions");
 		pass->SetInput("normals", "ambientOcclusion.normals");
 		pass->SetInput("diffuse", "geometryPass.diffuse");
 		pass->SetInput("specular", "geometryPass.specular");
+		pass->SetInput("ambientOcclusion", "verticalBlur.renderTarget");
 		pass->SetInput("srvHeap", "geometryPass.srvHeap");
 		Add(pass);
 	}
