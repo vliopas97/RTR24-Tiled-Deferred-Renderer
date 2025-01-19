@@ -73,12 +73,12 @@ project "DeferredRenderer"
     filter { "files:**/VertexShaders/*.hlsl" }
         removeflags "ExcludeFromBuild"
         shadertype "Vertex"
-        shaderobjectfileoutput 'src/Rendering/Shaders/build/%%(Filename)_VS.cso'
+        shaderobjectfileoutput '%{wks.location}/Content/Shaders-bin/%%(Filename)_VS.cso'
 
     filter { "files:**/PixelShaders/*.hlsl" }
         removeflags "ExcludeFromBuild"
         shadertype "Pixel"
-        shaderobjectfileoutput 'src/Rendering/Shaders/build/%%(Filename)_PS.cso'
+        shaderobjectfileoutput '%{wks.location}/Content/Shaders-bin/%%(Filename)_PS.cso'
 
     filter {"files:**.hlsli"}
         flags {"ExcludeFromBuild"}

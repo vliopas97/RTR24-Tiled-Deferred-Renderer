@@ -3,6 +3,8 @@
 #include "Buffer.h"
 #include "Shaders/HLSLCompat.h"
 
+#include <filesystem>
+
 enum class ShaderType
 {
 	Vertex = 0,
@@ -28,9 +30,8 @@ struct Shader final
 private:
 	std::wstring SetUpPath(const std::string& shaderName)
 	{
-		std::string currentDir = std::string(std::source_location::current().file_name());
-		currentDir = currentDir.substr(0, currentDir.find_last_of("\\/"));
-		return std::wstring(currentDir.begin(), currentDir.end()) + L"\\Shaders\\build\\";
+		std::string currentDir = std::filesystem::current_path().parent_path().string();
+		return std::wstring(currentDir.begin(), currentDir.end()) + L"\\Content\\Shaders-bin\\";
 	}
 
 	virtual std::wstring GetTag()
