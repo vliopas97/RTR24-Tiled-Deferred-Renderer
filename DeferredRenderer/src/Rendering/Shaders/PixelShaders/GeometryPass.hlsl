@@ -23,7 +23,7 @@ float3 normalPreprocess(float3 n, float3x3 TBN, float2 texCoords)
     Texture2D<float4> normalMap = getTexture(ID);
     float3 normalSample = normalMap.Sample(smplr, texCoords).xyz;
     n = 2.0f * normalSample.xyz - 1.0f;
-    n.xz = -n.xz;
+    n.z = -n.z;
     n = mul(TBN, n);
     return normalize(n);
 }

@@ -971,6 +971,7 @@ void AmbientOcclusionPass::InitResources(ID3D12Device5Ptr device)
 	// Set up heaps to bind
 	Heaps.PushBack(*SRVHeap);
 	Heaps.PushBack(Globals.SamplerHeap);
+	Heaps.PushBack(Globals.CBVHeap);
 
 	// Synchronization Point - Important because I copy data to GPU above
 	Globals.FenceValue = D3D::SubmitCommandList(cmdList, Globals.CmdQueue, Globals.Fence, Globals.FenceValue);

@@ -1,4 +1,4 @@
-#include "Camera.h"
+﻿#include "Camera.h"
 #include "Application.h"
 
 #include <algorithm>
@@ -50,8 +50,28 @@ void SaveStateToFile(const std::string& filename, glm::vec3 position, glm::vec3 
 	}
 }
 
-void LoadStateFromFile(const std::string& filename, glm::vec3& position, glm::vec3& rotation)
+float InterpolateAngle(float start, float end, float t)
 {
+	// Wrap angles to the range [-π, π]
+	float diff = glm::mod(end - start + glm::pi<float>(), glm::two_pi<float>()) - glm::pi<float>();
+
+	return start + t * diff;
+}
+
+glm::vec3 InterpolateAngles(const glm::vec3& start, const glm::vec3& end, float t)
+{
+	return glm::vec3(
+		InterpolateAngle(start.x, end.x, t),
+		InterpolateAngle(start.y, end.y, t),
+		InterpolateAngle(start.z, end.z, t)
+	);
+}
+
+void LoadStateFromFile(const std::string& filename, glm::vec3& currentPosition, glm::vec3& currentRotation, float deltaTime)
+{
+	static glm::vec3 targetPosition = currentPosition;
+	static glm::vec3 targetRotation = currentRotation;
+
 	// Build the file path
 	auto path = std::filesystem::current_path().parent_path().string() + "\\Content\\" + filename;
 
@@ -65,7 +85,7 @@ void LoadStateFromFile(const std::string& filename, glm::vec3& position, glm::ve
 	}
 
 	static std::string fileContents((std::istreambuf_iterator<char>(file)),
-							 std::istreambuf_iterator<char>());
+									std::istreambuf_iterator<char>());
 
 	file.close(); // File is no longer needed
 
@@ -73,45 +93,57 @@ void LoadStateFromFile(const std::string& filename, glm::vec3& position, glm::ve
 	std::string line;
 
 	static bool readPosition = false;
-    static bool readRotation = false;
+	static bool readRotation = false;
 
-    if (!readPosition)
-    {
-        std::getline(iss, line);
-        std::istringstream lineStream(line);
-        std::string type;
+	if (!readPosition)
+	{
+		std::getline(iss, line);
+		std::istringstream lineStream(line);
+		std::string type;
 
-        if (lineStream >> type && type == "Position:")
-        {
-            if (!(lineStream >> position.x >> position.y >> position.z))
-            {
-                std::cerr << "Failed to parse Position values on line: " << line << '\n';
-            }
-            readPosition = true;
-        }
-    }
+		if (lineStream >> type && type == "Position:")
+		{
+			if (!(lineStream >> targetPosition.x >> targetPosition.y >> targetPosition.z))
+			{
+				std::cerr << "Failed to parse Position values on line: " << line << '\n';
+			}
+			readPosition = true;
+		}
+	}
 
-    if (readPosition && !readRotation)
-    {
-        std::getline(iss, line);
-        std::istringstream lineStream(line);
-        std::string type;
+	if (readPosition && !readRotation)
+	{
+		std::getline(iss, line);
+		std::istringstream lineStream(line);
+		std::string type;
 
-        if (lineStream >> type && type == "Rotation:")
-        {
-            if (!(lineStream >> rotation.x >> rotation.y >> rotation.z))
-            {
-                std::cerr << "Failed to parse Rotation values on line: " << line << '\n';
-            }
-            readRotation = true;
-        }
-    }
+		if (lineStream >> type && type == "Rotation:")
+		{
+			if (!(lineStream >> targetRotation.x >> targetRotation.y >> targetRotation.z))
+			{
+				std::cerr << "Failed to parse Rotation values on line: " << line << '\n';
+			}
+			readRotation = true;
+		}
+	}
 
-    if (readPosition && readRotation)
-    {
-        readPosition = false;
-        readRotation = false;
-    }
+	if (readPosition && readRotation)
+	{
+		readPosition = false;
+		readRotation = false;
+	}
+
+	// Interpolate towards the target position and rotation
+	float translationSpeed = 3.0f; // Adjust this value to control the speed
+	float rotationSpeed = 1.0f;
+	float t = deltaTime * translationSpeed;
+	if (t > 1.0f) t = 1.0f; // Clamp t to avoid overshooting
+
+	currentPosition = glm::lerp(currentPosition, targetPosition, t);
+
+	t = deltaTime * rotationSpeed;
+	if (t > 1.0f) t = 1.0f;
+	currentRotation = InterpolateAngles(currentRotation, targetRotation, t);
 }
 
 
@@ -144,7 +176,7 @@ void Camera::Tick(float delta)
 	static bool startup = true;
 	if (startup)
 	{
-		LoadStateFromFile("cameraPath.txt", Position, Rotation);
+		LoadStateFromFile("cameraPath.txt", Position, Rotation, delta);
 		UpdateViewMatrix();
 		if (!Application::GetApp().GetWindow()->IsCursorVisible())
 			startup = false;

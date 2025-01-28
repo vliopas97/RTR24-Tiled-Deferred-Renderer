@@ -20,7 +20,6 @@ float4 main(float4 position : SV_Position) : SV_TARGET
 
     float3 centerDepthPos = Positions.Sample(smplr, texCoords).xyz;
     float3 normal = Normals.Sample(smplr, texCoords).xyz;
-    
     float2 noiseScale = float2(width / 8.0f, height / 8.0f);
     
     float3 randomVector = RandomTexture.Sample(smplr, texCoords * noiseScale).xyz;
@@ -38,18 +37,16 @@ float4 main(float4 position : SV_Position) : SV_TARGET
         float3 samplePosition = mul(transpose(TBN), Offsets[i]);
         samplePosition = samplePosition * radius + centerDepthPos;
         
-        float3 sampleDirection = normalize(samplePosition - centerDepthPos);
         float4 offset = mul(globalConstants.Projection, float4(samplePosition, 1.0f));
         offset.xy /= offset.w;
 
         float sampleDepth = Positions.Sample(smplr, float2(offset.x * 0.5f + 0.5f, -offset.y * 0.5f + 0.5f)).z;
-        
-        float rangeCheck = smoothstep(0.0f, 1.0f, radius / abs(centerDepthPos.z - sampleDepth));
-        occlusion += rangeCheck * step(samplePosition.z + 1e-4, sampleDepth);
+
+        float rangeCheck = smoothstep(0.0, 1.0, radius / abs(samplePosition.z - sampleDepth));
+        occlusion += rangeCheck * step(samplePosition.z, sampleDepth);
     }
     
     occlusion = 1.0f - (occlusion / 16.0f); // kernel size
     float occlusionOut = pow(occlusion, intensity);
-    
     return float4(float3(occlusionOut, occlusionOut, occlusionOut), 1.0f);
 }

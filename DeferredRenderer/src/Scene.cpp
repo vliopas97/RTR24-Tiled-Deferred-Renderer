@@ -90,8 +90,8 @@ void Scene::LoadModels(const Camera& camera)
 	auto scene = importer.ReadFile(objFilename,
 								   aiProcess_Triangulate 
 								   | aiProcess_ConvertToLeftHanded 
-								   | aiProcess_FixInfacingNormals
-								   | aiProcess_JoinIdenticalVertices
+								   //| aiProcess_FixInfacingNormals
+								   //| aiProcess_JoinIdenticalVertices
 								   | aiProcess_GenNormals |
 								   aiProcess_CalcTangentSpace);
 
