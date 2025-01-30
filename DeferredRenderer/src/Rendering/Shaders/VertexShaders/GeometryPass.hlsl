@@ -26,7 +26,6 @@ float2 texCoords : TEXCOORD)
     tangent = normalize(tangent);
     bitangent = normalize(bitangent);
     
-    //flipNormalForBackfaces(normal, posView);
     result.normal = normal;
     
     result.TBN = calcTBNmatrix(normal, tangent, bitangent);

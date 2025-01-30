@@ -83,7 +83,7 @@ Window::Window(int width, int height, HINSTANCE& instance, const char* title)
 
 	RECT rc = { 0, 0, width, height };
 	AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
-	Handle = CreateWindow(wcex.lpszClassName, wTitle, WS_OVERLAPPEDWINDOW, x, 200, (rc.right - rc.left),
+	Handle = CreateWindow(wcex.lpszClassName, wTitle, WS_OVERLAPPEDWINDOW, x, 100, (rc.right - rc.left),
 						  (rc.bottom - rc.top), NULL, NULL, instance, this);
 
 	ASSERT(Handle, "Failed to create window");

@@ -221,7 +221,9 @@ void Camera::UpdateViewMatrix()
 	RotationMatrix = glm::mat4_cast(rotationQuat);
 
 	glm::vec3 directionVector = glm::normalize(glm::vec3(RotationMatrix[2]));
-
+	auto position = Position;
+	//position.y = -position.y;
+	//directionVector.y = -directionVector.y;
 	View = glm::lookAtLH(Position, Position + directionVector, glm::vec3(0, 1, 0));
 	ViewProjection = Projection * View;
 

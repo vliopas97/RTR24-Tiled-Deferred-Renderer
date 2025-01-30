@@ -58,7 +58,7 @@ float4 main(float4 position : SV_Position) : SV_TARGET
     float4 matSpecular = Specular.Sample(smplr, texCoords).rgba;
     
     float3 lightPos = mul(globalConstants.View, float4(Sun.Position, 1.0f)).xyz;
-    float3 lightDir = mul(globalConstants.View, float4(Sun.Direction, 0.0f)).xyz;
+    float3 lightDir = mul(globalConstants.View, float4(-Sun.Direction, 0.0f)).xyz; // lightDir should be to the light for Phong so we flip
     
     float3 diffuse = Sun.DiffuseColor * Sun.DiffuseIntensity * 1.0f * max(0.0f, dot(lightDir, normal));
     float3 specular = length(matSpecular.xyz) == 0.0f ? calcSpecular(posView.xyz, lightDir, normal, matSpecular.a) 

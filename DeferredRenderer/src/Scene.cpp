@@ -89,9 +89,8 @@ void Scene::LoadModels(const Camera& camera)
 	std::filesystem::path solutionPath = std::filesystem::current_path().parent_path();
 	auto scene = importer.ReadFile(objFilename,
 								   aiProcess_Triangulate 
-								   | aiProcess_ConvertToLeftHanded 
-								   //| aiProcess_FixInfacingNormals
-								   //| aiProcess_JoinIdenticalVertices
+								   | aiProcess_ConvertToLeftHanded
+								   | aiProcess_JoinIdenticalVertices
 								   | aiProcess_GenNormals |
 								   aiProcess_CalcTangentSpace);
 

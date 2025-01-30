@@ -17,14 +17,13 @@ float3 normalPreprocess(float3 n, float3x3 TBN, float2 texCoords)
 {
     int ID = actorData.KnID;
     
-    if (ID < 0)
-        return normalize(-1.0f * n); // if no normal map available
-        
-    Texture2D<float4> normalMap = getTexture(ID);
-    float3 normalSample = normalMap.Sample(smplr, texCoords).xyz;
-    n = 2.0f * normalSample.xyz - 1.0f;
-    n.z = -n.z;
-    n = mul(TBN, n);
+    if (ID >= 0) // if normal map exists
+    {
+        Texture2D<float4> normalMap = getTexture(ID);
+        float3 normalSample = normalMap.Sample(smplr, texCoords).xyz;
+        n = 2.0f * normalSample.xyz - 1.0f;
+        n = mul(TBN, n);
+    }
     return normalize(n);
 }
 

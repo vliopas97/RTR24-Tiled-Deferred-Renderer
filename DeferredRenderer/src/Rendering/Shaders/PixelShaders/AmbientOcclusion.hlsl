@@ -43,7 +43,7 @@ float4 main(float4 position : SV_Position) : SV_TARGET
         float sampleDepth = Positions.Sample(smplr, float2(offset.x * 0.5f + 0.5f, -offset.y * 0.5f + 0.5f)).z;
 
         float rangeCheck = smoothstep(0.0, 1.0, radius / abs(samplePosition.z - sampleDepth));
-        occlusion += rangeCheck * step(samplePosition.z, sampleDepth);
+        occlusion += rangeCheck * step(sampleDepth +1e-4, samplePosition.z);
     }
     
     occlusion = 1.0f - (occlusion / 16.0f); // kernel size
