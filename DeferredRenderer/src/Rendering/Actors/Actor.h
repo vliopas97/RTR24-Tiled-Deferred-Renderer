@@ -2,8 +2,13 @@
 #include "Core/Core.h"
 #include "Rendering/Buffer.h"
 #include "Rendering/Shaders/HLSLCompat.h"
+
 #include "Rendering/Resources.h"
-#include "Rendering/RenderPass.h"
+#include "Rendering/RenderPasses/RenderPass.h"
+#include "Rendering/RenderPasses/Geometry.h"
+#include "Rendering/RenderPasses/GUI.h"
+#include "Rendering/RenderPasses/Clear.h"
+#include "Rendering/RenderPasses/Forward.h"
 
 #include <typeindex>
 
@@ -18,7 +23,7 @@ constexpr uint32_t MaxResourcesPerInstance = 10;
 
 class Actor
 {
-	using Resources2RenderPassMap = std::unordered_map<std::type_index, std::vector<std::pair<LocalRenderPassBase*, UINT>>>;
+	using Resources2RenderPassMap = std::unordered_map<std::type_index, std::vector<std::pair<ResourceGPUBase*, UINT>>>;
 
 public:
 	Actor(ID3D12Device5Ptr device, const class Camera& camera);
@@ -44,7 +49,7 @@ public:
 
 protected:
 	template<typename Pass, typename T>
-	requires std::is_base_of_v<LocalRenderPassBase, T> && std::is_base_of_v<RenderPass, Pass>
+	requires std::is_base_of_v<ResourceGPUBase, T> && std::is_base_of_v<RenderPass, Pass>
 	void AddResourceToMap(T& rscPtr, UINT slot)
 	{
 		auto& resources = ResourceMap[std::type_index(typeid(Pass))];
@@ -76,7 +81,7 @@ protected:
 	//ConstantBuffer<ActorData> ActorInfo;
 	Resources2RenderPassMap ResourceMap;
 
-	UniquePtr<LocalRenderPass_CBV<ActorData>> ActorInfo;
+	UniquePtr<ResourceGPU_CBV<ActorData>> ActorInfo;
 
 	friend class Scene;
 };

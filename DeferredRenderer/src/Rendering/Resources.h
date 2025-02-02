@@ -109,17 +109,18 @@ struct Transition : public TransitionBase
 };
 
 // To be used by actors to bind non-global variables to PSOs of the appropriate Render Pass
-struct LocalRenderPassBase
+struct ResourceGPUBase
 {
-	virtual ~LocalRenderPassBase() = default;
+	virtual ~ResourceGPUBase() = default;
 	virtual void Bind(ID3D12GraphicsCommandList4Ptr cmdList, UINT slot) const = 0;
 };
 
 template<typename T>
 requires HasGetGPUVirtualAddress<T>
-struct LocalRenderPassResources : public LocalRenderPassBase
+struct ResourceGPU : public ResourceGPUBase
 {
-	LocalRenderPassResources() = default;
+	ResourceGPU() = default;
+	virtual ~ResourceGPU() = default;
 
 	uint64_t GetGPUVirtualAddress() const
 	{
@@ -134,9 +135,9 @@ struct LocalRenderPassResources : public LocalRenderPassBase
 
 template<typename T>
 requires is_base_of_template<ConstantBuffer, T>::value
-struct LocalRenderPassResource_CBV : public LocalRenderPassResources<T>
+struct ResourceGPU_ConstantBufferView : public ResourceGPU<T>
 {
-	using LocalRenderPassResources::LocalRenderPassResources;
+	using ResourceGPU::ResourceGPU;
 	virtual void Bind(ID3D12GraphicsCommandList4Ptr cmdList, UINT slot) const override
 	{
 		cmdList->SetGraphicsRootConstantBufferView(slot, GetGPUVirtualAddress());
@@ -144,7 +145,7 @@ struct LocalRenderPassResource_CBV : public LocalRenderPassResources<T>
 };
 
 template<typename T>
-using LocalRenderPass_CBV = LocalRenderPassResource_CBV<ConstantBuffer<T>>;
+using ResourceGPU_CBV = ResourceGPU_ConstantBufferView<ConstantBuffer<T>>;
 
 struct DescriptorHeapComposite
 {

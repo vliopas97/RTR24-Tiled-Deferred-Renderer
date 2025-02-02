@@ -8,7 +8,7 @@
 #include "Actors/Actor.h"
 #include "Scene.h"
 #include "Rendering/RootSignature.h"
-#include "Rendering/RenderPass.h"
+#include "Rendering/RenderPasses/RenderPass.h"
 #include "Rendering/Resources.h"
 #include "Rendering/RenderGraph.h"
 

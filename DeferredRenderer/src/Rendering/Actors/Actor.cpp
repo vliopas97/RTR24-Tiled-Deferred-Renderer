@@ -10,7 +10,7 @@ Actor::Actor(ID3D12Device5Ptr device, const Camera& camera)
     Rotation(0.0f, 0.0f, 0.0f),
     Scale(1.0f, 1.0f, 1.0f)
 {
-    ActorInfo = MakeUnique<LocalRenderPass_CBV<ActorData>>();
+    ActorInfo = MakeUnique<ResourceGPU_CBV<ActorData>>();
     ActorInfo->Resource.CPUData.Material.MatericalColor = glm::vec3(1.0f, 1.0f, 1.0f);
     ActorInfo->Resource.CPUData.Material.SpecularIntensity = 1.0f;
     ActorInfo->Resource.CPUData.Material.Shininess = 12.0f;

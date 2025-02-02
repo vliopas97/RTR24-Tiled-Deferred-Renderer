@@ -1,8 +1,14 @@
 #pragma once
 #include "Core/Core.h"
 #include "Resources.h"
-#include "RenderPass.h"
-#include "Core/Layer.h"
+#include "RenderPasses/RenderPass.h"
+#include "RenderPasses/Blur.h"
+#include "RenderPasses/AmbientOcclusion.h"
+#include "RenderPasses/Geometry.h"
+#include "RenderPasses/Lighting.h"
+#include "RenderPasses/GUI.h"
+#include "RenderPasses/Clear.h"
+#include "RenderPasses/Forward.h"
 
 class RenderGraph
 {
