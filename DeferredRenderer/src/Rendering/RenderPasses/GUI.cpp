@@ -15,7 +15,7 @@ GUIPass::GUIPass(std::string&& name)
 	Register<PassOutput<ID3D12ResourcePtr>>("normals", Normals, D3D12_RESOURCE_STATE_RENDER_TARGET);
 	Register<PassOutput<ID3D12ResourcePtr>>("diffuse", Diffuse, D3D12_RESOURCE_STATE_RENDER_TARGET);
 	Register<PassOutput<ID3D12ResourcePtr>>("specular", Specular, D3D12_RESOURCE_STATE_RENDER_TARGET);
-	Register<PassOutput<ID3D12ResourcePtr>>("ambientOcclusion", AmbientOcclusion, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	Register<PassOutput<ID3D12ResourcePtr>>("ambientOcclusion", AmbientOcclusion, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 }
 
 GUIPass::~GUIPass()
@@ -47,7 +47,7 @@ void GUIPass::InitResources(ID3D12Device5Ptr device)
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	srvDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 	srvDesc.Texture2D.MipLevels = 1;
 	srvDesc.Texture2D.MostDetailedMip = 0;

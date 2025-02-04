@@ -48,16 +48,22 @@ RenderGraph::RenderGraph(ID3D12Device5Ptr device)
 		pass->SetInput("positions", "geometryPass.positions");
 		Add(pass);
 	}
-	// Horizontal Blur Pass
+	//// Horizontal Blur Pass
+	//{
+	//	auto pass = MakeUnique<HorizontalBlurPass>("horizontalBlur");
+	//	pass->SetInput("processedResource", "ambientOcclusion.renderTarget");
+	//	Add(pass);
+	//}
+	//// Vertical Blur Pass
+	//{
+	//	auto pass = MakeUnique<VerticalBlurPass>("verticalBlur");
+	//	pass->SetInput("processedResource", "horizontalBlur.renderTarget");
+	//	Add(pass);
+	//}
+	// Combined Blur Pass
 	{
-		auto pass = MakeUnique<HorizontalBlurPass>("horizontalBlur");
+		auto pass = MakeUnique<CombinedBlurPass>("blur");
 		pass->SetInput("processedResource", "ambientOcclusion.renderTarget");
-		Add(pass);
-	}
-	// Vertical Blur Pass
-	{
-		auto pass = MakeUnique<VerticalBlurPass>("verticalBlur");
-		pass->SetInput("processedResource", "horizontalBlur.renderTarget");
 		Add(pass);
 	}
 	// Lighting Pass
@@ -68,7 +74,7 @@ RenderGraph::RenderGraph(ID3D12Device5Ptr device)
 		pass->SetInput("normals", "ambientOcclusion.normals");
 		pass->SetInput("diffuse", "geometryPass.diffuse");
 		pass->SetInput("specular", "geometryPass.specular");
-		pass->SetInput("ambientOcclusion", "verticalBlur.renderTarget");
+		pass->SetInput("ambientOcclusion", "blur.renderTarget");
 		pass->SetInput("srvHeap", "geometryPass.srvHeap");
 		Add(pass);
 	}

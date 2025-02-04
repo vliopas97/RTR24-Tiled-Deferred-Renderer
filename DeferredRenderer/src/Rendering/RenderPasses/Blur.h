@@ -40,3 +40,20 @@ protected:
 	void InitResources(ID3D12Device5Ptr device) override;
 };
 
+class CombinedBlurPass final : public RenderPass
+{
+public:
+	CombinedBlurPass(std::string&& name);
+	void Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene) override;
+protected:
+	void InitResources(ID3D12Device5Ptr device) override;
+	void InitRootSignature() override;
+	void InitPipelineState() override;
+protected:
+	ID3D12DescriptorHeapPtr SRVHeap;
+	ID3D12DescriptorHeapPtr UAVHeap;
+
+	SharedPtr<ID3D12ResourcePtr> SRVToBlur;
+	SharedPtr<ID3D12ResourcePtr> BlurOutput;
+};
+

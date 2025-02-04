@@ -9,11 +9,13 @@ enum class ShaderType
 {
 	Vertex = 0,
 	Pixel,
+	Compute,
 	Size
 };
 
 constexpr ShaderType Vertex = ShaderType::Vertex;
 constexpr ShaderType Pixel = ShaderType::Pixel;
+constexpr ShaderType Compute = ShaderType::Compute;
 
 template<ShaderType Type>
 struct Shader final
@@ -38,6 +40,7 @@ private:
 	{
 		if constexpr (Type == ShaderType::Vertex) return L"_VS";
 		else if constexpr (Type == ShaderType::Pixel) return L"_PS";
+		else if constexpr (Type == ShaderType::Compute) return L"_CS";
 		else
 		{
 			assert(false && "Invalid Shader Type");

@@ -29,6 +29,16 @@ void DescriptorHeapComposite::Bind(ID3D12GraphicsCommandList4Ptr cmdList) const
 	}
 }
 
+void DescriptorHeapComposite::BindCompute(ID3D12GraphicsCommandList4Ptr cmdList) const
+{
+	UINT rootParameterIndex = 0;
+	for (const auto& heap : Heaps)
+	{
+		BindDescriptorHeap(cmdList, heap);
+		cmdList->SetComputeRootDescriptorTable(rootParameterIndex++, heap->GetGPUDescriptorHandleForHeapStart());
+	}
+}
+
 void DescriptorHeapComposite::PushBack(ID3D12DescriptorHeapPtr heap)
 {
 	Heaps.push_back(heap);

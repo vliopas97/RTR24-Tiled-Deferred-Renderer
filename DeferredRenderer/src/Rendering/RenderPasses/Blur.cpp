@@ -32,7 +32,7 @@ void BlurPass::Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene)
 void BlurPass::InitResources(ID3D12Device5Ptr device)
 {
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
-	srvDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 	srvDesc.Texture2D.MipLevels = 1;
@@ -49,7 +49,7 @@ void BlurPass::InitResources(ID3D12Device5Ptr device)
 
 	// Create Render Target
 	D3D12_CLEAR_VALUE clearValue = {};
-	clearValue.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	clearValue.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	clearValue.Color[0] = 1.0f;
 	clearValue.Color[1] = 1.0f;
 	clearValue.Color[2] = 1.0f;
@@ -59,7 +59,7 @@ void BlurPass::InitResources(ID3D12Device5Ptr device)
 		D3D12_RESOURCE_DIMENSION_TEXTURE2D,
 		D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT,
 		Globals.WindowDimensions.x, Globals.WindowDimensions.y, 1, 1,
-		DXGI_FORMAT_R32G32B32A32_FLOAT,
+		DXGI_FORMAT_R8G8B8A8_UNORM,
 		1, 0,
 		D3D12_TEXTURE_LAYOUT_UNKNOWN, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
 
@@ -134,7 +134,7 @@ void BlurPass::InitPipelineState()
 	psoDesc.SampleMask = UINT_MAX;
 	psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	psoDesc.NumRenderTargets = 1;
-	psoDesc.RTVFormats[0] = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 	psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
 	psoDesc.SampleDesc.Count = 1;
 
@@ -171,4 +171,94 @@ void VerticalBlurPass::InitResources(ID3D12Device5Ptr device)
 
 	Controls.Resource.CPUData.IsHorizontal = false;
 	Controls.Resource.Tick();
+}
+
+CombinedBlurPass::CombinedBlurPass(std::string&& name)
+	:RenderPass(std::move(name))
+{
+	Register<PassInput<ID3D12ResourcePtr>>("processedResource", SRVToBlur, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	Register<PassOutput<ID3D12ResourcePtr>>("processedResource", SRVToBlur, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	Register<PassOutput<ID3D12ResourcePtr>>("renderTarget", BlurOutput, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+}
+
+void CombinedBlurPass::Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene)
+{
+	cmdList->SetComputeRootSignature(RootSignatureData.RootSignaturePtr.GetInterfacePtr());
+	Heaps.BindCompute(cmdList);
+
+	UINT threadGroupX = (Globals.WindowDimensions.x + 127) / (16);  // Assuming 16x16 thread group size
+	UINT threadGroupY = (Globals.WindowDimensions.y + 127) / (16);
+	cmdList->Dispatch(threadGroupX, threadGroupY, 1);
+}
+
+void CombinedBlurPass::InitResources(ID3D12Device5Ptr device)
+{
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
+	srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MipLevels = 1;
+	srvDesc.Texture2D.MostDetailedMip = 0;
+	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+
+	SRVHeap = D3D::CreateDescriptorHeap(device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
+	D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = SRVHeap->GetCPUDescriptorHandleForHeapStart();
+	device->CreateShaderResourceView(*SRVToBlur, &srvDesc, srvHandle);
+
+	auto resDesc = CD3DX12_RESOURCE_DESC(
+		D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+		D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT,
+		Globals.WindowDimensions.x, Globals.WindowDimensions.y, 1, 1,
+		DXGI_FORMAT_R8G8B8A8_UNORM,
+		1, 0,
+		D3D12_TEXTURE_LAYOUT_UNKNOWN, 
+		D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS | D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
+
+	ID3D12ResourcePtr uavResource;
+	GRAPHICS_ASSERT(device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&resDesc,
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		NULL,
+		IID_PPV_ARGS(&uavResource)));
+	BlurOutput = MakeShared<ID3D12ResourcePtr>(uavResource);
+	BlurOutput->GetInterfacePtr()->SetName(L"combinedBlurOutput");
+	// RTV Heap
+	UAVHeap = D3D::CreateDescriptorHeap(device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
+
+	auto uavHandle = UAVHeap->GetCPUDescriptorHandleForHeapStart();
+	device->CreateShaderResourceView(*BlurOutput, &srvDesc, uavHandle);
+
+	Heaps.PushBack(SRVHeap);
+	Heaps.PushBack(UAVHeap);
+}
+
+void CombinedBlurPass::InitRootSignature()
+{
+	std::vector<D3D12_DESCRIPTOR_RANGE> srvRanges = {
+DescriptorRangeBuilder::CreateRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0)
+	};
+
+	std::vector<D3D12_DESCRIPTOR_RANGE> uavRanges = {
+		DescriptorRangeBuilder::CreateRange(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0)
+	};
+
+	RootSignatureData.AddDescriptorTable(srvRanges, D3D12_SHADER_VISIBILITY_ALL);
+	RootSignatureData.AddDescriptorTable(uavRanges, D3D12_SHADER_VISIBILITY_ALL);
+
+	RootSignatureData.Build(Device);
+}
+
+void CombinedBlurPass::InitPipelineState()
+{
+	Shader<Compute> computeShader("BlurPass");
+
+    // Describe and create the compute pipeline state object (PSO)
+    D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
+    psoDesc.pRootSignature = RootSignatureData.RootSignaturePtr.GetInterfacePtr();
+    psoDesc.CS = CD3DX12_SHADER_BYTECODE(computeShader.GetBlob());
+
+    // Create the compute pipeline state
+    GRAPHICS_ASSERT(Device->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&PipelineState)));
 }

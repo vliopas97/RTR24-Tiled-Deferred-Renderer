@@ -152,6 +152,7 @@ struct DescriptorHeapComposite
 public:
 	virtual ~DescriptorHeapComposite() = default;
 	void Bind(ID3D12GraphicsCommandList4Ptr cmdList) const;
+	void BindCompute(ID3D12GraphicsCommandList4Ptr cmdList) const;
 	void PushBack(ID3D12DescriptorHeapPtr heap);
 
 private:

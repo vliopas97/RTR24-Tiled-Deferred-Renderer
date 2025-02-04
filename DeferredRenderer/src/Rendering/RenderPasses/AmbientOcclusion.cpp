@@ -157,7 +157,7 @@ void AmbientOcclusionPass::InitResources(ID3D12Device5Ptr device)
 
 	// Create Render Target
 	D3D12_CLEAR_VALUE clearValue = {};
-	clearValue.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	clearValue.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	clearValue.Color[0] = 1.0f;
 	clearValue.Color[1] = 1.0f;
 	clearValue.Color[2] = 1.0f;
@@ -167,7 +167,7 @@ void AmbientOcclusionPass::InitResources(ID3D12Device5Ptr device)
 		D3D12_RESOURCE_DIMENSION_TEXTURE2D,
 		D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT,
 		Globals.WindowDimensions.x, Globals.WindowDimensions.y, 1, 1,
-		DXGI_FORMAT_R32G32B32A32_FLOAT,
+		DXGI_FORMAT_R8G8B8A8_UNORM,
 		1, 0,
 		D3D12_TEXTURE_LAYOUT_UNKNOWN, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
 
@@ -283,7 +283,7 @@ void AmbientOcclusionPass::InitPipelineState()
 	psoDesc.SampleMask = UINT_MAX;
 	psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	psoDesc.NumRenderTargets = 1;
-	psoDesc.RTVFormats[0] = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 	psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
 	psoDesc.SampleDesc.Count = 1;
 

@@ -75,6 +75,11 @@ project "DeferredRenderer"
         shadertype "Vertex"
         shaderobjectfileoutput '%{wks.location}/Content/Shaders-bin/%%(Filename)_VS.cso'
 
+    filter { "files:**/ComputeShaders/*.hlsl" }
+        removeflags "ExcludeFromBuild"
+        shadertype "Compute"
+        shaderobjectfileoutput '%{wks.location}/Content/Shaders-bin/%%(Filename)_CS.cso'
+
     filter { "files:**/PixelShaders/*.hlsl" }
         removeflags "ExcludeFromBuild"
         shadertype "Pixel"
