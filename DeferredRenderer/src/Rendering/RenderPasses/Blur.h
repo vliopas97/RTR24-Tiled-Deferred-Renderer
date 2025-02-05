@@ -21,7 +21,6 @@ protected:
 
 	SharedPtr<ID3D12ResourcePtr> SRVToBlur;
 	ResourceGPU_CBV<BlurPassControls> Controls;
-
 };
 
 class HorizontalBlurPass final : public BlurPass
@@ -40,20 +39,40 @@ protected:
 	void InitResources(ID3D12Device5Ptr device) override;
 };
 
-class CombinedBlurPass final : public RenderPass
+class CombinedBlurPass : public RenderPass
 {
 public:
 	CombinedBlurPass(std::string&& name);
-	void Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene) override;
+	virtual void Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene) override;
 protected:
-	void InitResources(ID3D12Device5Ptr device) override;
-	void InitRootSignature() override;
-	void InitPipelineState() override;
+	virtual void InitResources(ID3D12Device5Ptr device) override;
+	virtual void InitRootSignature() override;
+	virtual void InitPipelineState() override;
+private:
+	void InitStaticResources(ID3D12Device5Ptr device);
 protected:
 	ID3D12DescriptorHeapPtr SRVHeap;
 	ID3D12DescriptorHeapPtr UAVHeap;
 
 	SharedPtr<ID3D12ResourcePtr> SRVToBlur;
 	SharedPtr<ID3D12ResourcePtr> BlurOutput;
+
+	static ID3D12DescriptorHeapPtr FiltersHeap;
+	static ID3D12ResourcePtr Filters;
+
+public:
+	static const uint GroupSize = 16;
 };
 
+class CombinedBlurPassGlobal : public CombinedBlurPass
+{
+public:
+	CombinedBlurPassGlobal(std::string&& name, uint radius = 5);
+	void Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene) override;
+	inline void SetRadius(uint radius);
+protected:
+	void InitResources(ID3D12Device5Ptr device) override;
+private:
+	ResourceGPU_CBV<uint> FilterRadius;
+	ID3D12DescriptorHeapPtr	CBVHeap;
+};

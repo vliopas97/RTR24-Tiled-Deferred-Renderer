@@ -113,6 +113,7 @@ struct ResourceGPUBase
 {
 	virtual ~ResourceGPUBase() = default;
 	virtual void Bind(ID3D12GraphicsCommandList4Ptr cmdList, UINT slot) const = 0;
+	virtual void BindCompute(ID3D12GraphicsCommandList4Ptr cmdList, UINT slot) const = 0;
 };
 
 template<typename T>
@@ -141,6 +142,11 @@ struct ResourceGPU_ConstantBufferView : public ResourceGPU<T>
 	virtual void Bind(ID3D12GraphicsCommandList4Ptr cmdList, UINT slot) const override
 	{
 		cmdList->SetGraphicsRootConstantBufferView(slot, GetGPUVirtualAddress());
+	}
+
+	virtual void BindCompute(ID3D12GraphicsCommandList4Ptr cmdList, UINT slot) const override
+	{
+		cmdList->SetComputeRootConstantBufferView(slot, GetGPUVirtualAddress());
 	}
 };
 

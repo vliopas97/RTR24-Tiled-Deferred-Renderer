@@ -13,6 +13,7 @@ typedef uint4 uvec4;
 typedef int BOOL;
 
 #define ALIGNAS(x)
+#define constexpr const
 
 #else
 
@@ -61,6 +62,12 @@ struct DirLightData
 struct BlurPassControls
 {
 	BOOL IsHorizontal;
+};
+
+static constexpr uint MaxRadius = 16;
+struct Kernel
+{
+	float Coeffs[2 * MaxRadius + 1];
 };
 
 #endif // HLSLCOMPAT_H

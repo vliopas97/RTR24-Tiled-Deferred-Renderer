@@ -62,7 +62,7 @@ RenderGraph::RenderGraph(ID3D12Device5Ptr device)
 	//}
 	// Combined Blur Pass
 	{
-		auto pass = MakeUnique<CombinedBlurPass>("blur");
+		auto pass = MakeUnique<CombinedBlurPassGlobal>("blur");
 		pass->SetInput("processedResource", "ambientOcclusion.renderTarget");
 		Add(pass);
 	}
