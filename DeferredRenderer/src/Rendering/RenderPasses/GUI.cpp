@@ -9,7 +9,6 @@ GUIPass::GUIPass(std::string&& name)
 	Register<PassInput<ID3D12ResourcePtr>>("diffuse", Diffuse, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	Register<PassInput<ID3D12ResourcePtr>>("specular", Specular, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	Register<PassInput<ID3D12ResourcePtr>>("ambientOcclusion", AmbientOcclusion, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	Register<PassInput<ID3D12DescriptorHeapPtr>>("srvHeap", SRVHeap);
 
 	Register<PassOutput<ID3D12ResourcePtr>>("positions", Positions, D3D12_RESOURCE_STATE_RENDER_TARGET);
 	Register<PassOutput<ID3D12ResourcePtr>>("normals", Normals, D3D12_RESOURCE_STATE_RENDER_TARGET);
@@ -36,26 +35,42 @@ void GUIPass::Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene)
 
 void GUIPass::InitResources(ID3D12Device5Ptr device)
 {
-	auto temp = D3D::CreateDescriptorHeap(device, 1 + (*SRVHeap)->GetDesc().NumDescriptors, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, false);
-	auto dstHandle = temp->GetCPUDescriptorHandleForHeapStart();
-	auto srcHandle = (*SRVHeap)->GetCPUDescriptorHandleForHeapStart();
-	device->CopyDescriptorsSimple(4, dstHandle,
-								  srcHandle,
-								  D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
-	dstHandle.ptr += 4 * (device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
-
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(0, 1, 2, 5);
+	srvDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
 	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 	srvDesc.Texture2D.MipLevels = 1;
 	srvDesc.Texture2D.MostDetailedMip = 0;
 	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
 
-	device->CreateShaderResourceView(*AmbientOcclusion, &srvDesc, dstHandle);
+	SRVHeap = D3D::CreateDescriptorHeap(device, 5, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, false);
+	auto srvHandle = SRVHeap->GetCPUDescriptorHandleForHeapStart();
 
-	Layer = MakeUnique<ImGuiLayer>(temp);
+	auto desc = (*Positions)->GetDesc();
+	srvDesc.Format = desc.Format;
+	device->CreateShaderResourceView(*Positions, &srvDesc, srvHandle);
+	srvHandle.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+	desc = (*Normals)->GetDesc();
+	srvDesc.Format = desc.Format;
+	device->CreateShaderResourceView(*Normals, &srvDesc, srvHandle);
+	srvHandle.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+	desc = (*Diffuse)->GetDesc();
+	srvDesc.Format = desc.Format;
+	device->CreateShaderResourceView(*Diffuse, &srvDesc, srvHandle);
+	srvHandle.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+	desc = (*Specular)->GetDesc();
+	srvDesc.Format = desc.Format;
+	device->CreateShaderResourceView(*Specular, &srvDesc, srvHandle);
+	srvHandle.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+	desc = (*AmbientOcclusion)->GetDesc();
+	srvDesc.Format = desc.Format;
+	device->CreateShaderResourceView(*AmbientOcclusion, &srvDesc, srvHandle);
+
+	Layer = MakeUnique<ImGuiLayer>(SRVHeap);
 	Layer->OnAttach(Device);
 
 	auto handle = Layer->DescriptorHeap->GetGPUDescriptorHandleForHeapStart();

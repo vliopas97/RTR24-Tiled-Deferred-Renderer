@@ -25,7 +25,7 @@ private:
 
 	SharedPtr<ID3D12ResourcePtr> AmbientOcclusion;
 
-	SharedPtr<ID3D12DescriptorHeapPtr> SRVHeap{};
+	ID3D12DescriptorHeapPtr SRVHeap{};
 	std::array<D3D12_GPU_DESCRIPTOR_HANDLE, 5> GPUHandlesGBuffers;
 };
 
