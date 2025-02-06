@@ -4,7 +4,7 @@
 LightingPass::LightingPass(std::string&& name)
 	:RenderPass(std::move(name))
 {
-	Register<PassInput<ID3D12ResourcePtr>>("renderTarget", RTVBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	//Register<PassInput<ID3D12ResourcePtr>>("renderTarget", RTVBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
 	Register<PassInput<ID3D12ResourcePtr>>("positions", Positions, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	Register<PassInput<ID3D12ResourcePtr>>("normals", Normals, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	Register<PassInput<ID3D12ResourcePtr>>("diffuse", Diffuse, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
@@ -12,7 +12,7 @@ LightingPass::LightingPass(std::string&& name)
 	Register<PassInput<ID3D12ResourcePtr>>("ambientOcclusion", AmbientOcclusion, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	Register<PassInput<ID3D12DescriptorHeapPtr>>("srvHeap", GBufferHeap);
 
-	Register<PassOutput<ID3D12ResourcePtr>>("renderTarget", RTVBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	Register<PassOutput<ID3D12ResourcePtr>>("renderTarget", RTVBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	Register<PassOutput<ID3D12ResourcePtr>>("positions", Positions, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	Register<PassOutput<ID3D12ResourcePtr>>("normals", Normals, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	Register<PassOutput<ID3D12ResourcePtr>>("diffuse", Diffuse, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
@@ -37,7 +37,10 @@ void LightingPass::Bind(ID3D12GraphicsCommandList4Ptr cmdList) const
 	// Set scissor rect
 	D3D12_RECT scissorRect = { 0, 0, Globals.WindowDimensions.x, Globals.WindowDimensions.y };
 	cmdList->RSSetScissorRects(1, &scissorRect);
-	cmdList->OMSetRenderTargets(1, &Globals.RTVHandle, FALSE, nullptr);
+
+	const float clearColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+	cmdList->ClearRenderTargetView(RTVHandle, clearColor, 0, nullptr);
+	cmdList->OMSetRenderTargets(1, &RTVHandle, FALSE, nullptr);
 
 	Heaps.Bind(cmdList);
 
@@ -58,6 +61,39 @@ void LightingPass::InitResources(ID3D12Device5Ptr device)
 	AOHeap = D3D::CreateDescriptorHeap(device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
 	D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = AOHeap->GetCPUDescriptorHandleForHeapStart();
 	device->CreateShaderResourceView(*AmbientOcclusion, &srvDesc, srvHandle);
+
+	// Create Render Target
+	D3D12_CLEAR_VALUE clearValue = {};
+	clearValue.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	clearValue.Color[0] = 1.0f;
+	clearValue.Color[1] = 1.0f;
+	clearValue.Color[2] = 1.0f;
+	clearValue.Color[3] = 1.0f;
+
+	auto resDesc = CD3DX12_RESOURCE_DESC(
+		D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+		D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT,
+		Globals.WindowDimensions.x, Globals.WindowDimensions.y, 1, 1,
+		DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,
+		1, 0,
+		D3D12_TEXTURE_LAYOUT_UNKNOWN, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
+
+	ID3D12ResourcePtr renderTarget;
+	GRAPHICS_ASSERT(device->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&resDesc,
+		D3D12_RESOURCE_STATE_RENDER_TARGET,
+		&clearValue,
+		IID_PPV_ARGS(&renderTarget)));
+	RTVBuffer = MakeShared<ID3D12ResourcePtr>(renderTarget);
+
+	// RTV Heap
+	auto rtvHeap = D3D::CreateDescriptorHeap(device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, false);
+	RTVHeap = MakeShared<ID3D12DescriptorHeapPtr>(rtvHeap);
+
+	RTVHandle = rtvHeap->GetCPUDescriptorHandleForHeapStart();
+	device->CreateRenderTargetView(*RTVBuffer, nullptr, RTVHandle);
 
 	Heaps.PushBack(*GBufferHeap);
 	Heaps.PushBack(AOHeap);

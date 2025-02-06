@@ -41,6 +41,10 @@ Model::Model(ID3D12Device5Ptr device,
 	auto& data = ActorInfo->Resource.CPUData;
 
 	material->GetTexture(aiTextureType_DIFFUSE, 0, &filename);
+
+	std::string file = filename.C_Str();
+	if (file.find("floor") != std::string::npos) data.Material.Reflectiveness = 0.85f;
+
 	data.KdID = findTextureIndex(filename);
 	material->GetTexture(aiTextureType_NORMALS, 0, &filename);
 	data.KnID = findTextureIndex(filename);

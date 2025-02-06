@@ -47,8 +47,8 @@ PSOutput main(float3 posView : POSITION, float3 normal : Normal, float3x3 TBN : 
     
     normal = normalPreprocess(normal, TBN, texCoords);
     
-    output.Positions = float4(posView, 1.0f);
-    output.Normals = float4(normal, 1.0f);
+    output.Positions = float4(posView, actorData.Material.Reflectiveness);
+    output.Normals = float4(normal, 0.0f);
     output.Diffuse = texSample;
     output.Specular = (actorData.KsID < 0) ? float4(0, 0, 0, actorData.Material.Shininess) : getTexture(actorData.KsID).Sample(smplr, texCoords);
     

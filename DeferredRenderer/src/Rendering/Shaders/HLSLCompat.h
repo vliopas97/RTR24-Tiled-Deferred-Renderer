@@ -38,6 +38,7 @@ struct ALIGNAS(16) MaterialData
 	float3 MatericalColor;
 	float SpecularIntensity;
 	float Shininess;
+	float Reflectiveness;
 };
 
 struct ActorData

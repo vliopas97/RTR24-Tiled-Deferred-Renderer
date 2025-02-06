@@ -149,7 +149,7 @@ void LoadStateFromFile(const std::string& filename, glm::vec3& currentPosition, 
 
 Camera::Camera()
 	:FovY(2.0f), AspectRatio(16.0f / 9.0f), NearZ(0.2f), FarZ(400.0f),
-	Projection(glm::perspectiveLH_NO(glm::degrees(FovY), AspectRatio, NearZ, FarZ)), 
+	Projection(glm::perspectiveLH_ZO(glm::degrees(FovY), AspectRatio, NearZ, FarZ)), 
 	View(glm::mat4x4(1.0f)), RotationMatrix(1.0f)
 {
 	ViewProjection = Projection * View;
@@ -221,9 +221,6 @@ void Camera::UpdateViewMatrix()
 	RotationMatrix = glm::mat4_cast(rotationQuat);
 
 	glm::vec3 directionVector = glm::normalize(glm::vec3(RotationMatrix[2]));
-	auto position = Position;
-	//position.y = -position.y;
-	//directionVector.y = -directionVector.y;
 	View = glm::lookAtLH(Position, Position + directionVector, glm::vec3(0, 1, 0));
 	ViewProjection = Projection * View;
 

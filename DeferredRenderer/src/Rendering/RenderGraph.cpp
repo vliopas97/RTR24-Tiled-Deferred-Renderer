@@ -69,7 +69,7 @@ RenderGraph::RenderGraph(ID3D12Device5Ptr device)
 	// Lighting Pass
 	{
 		auto pass = MakeUnique<LightingPass>("lightingPass");
-		pass->SetInput("renderTarget", "clear.renderTarget");
+		//pass->SetInput("renderTarget", "clear.renderTarget");
 		pass->SetInput("positions", "ambientOcclusion.positions");
 		pass->SetInput("normals", "ambientOcclusion.normals");
 		pass->SetInput("diffuse", "geometryPass.diffuse");
@@ -78,18 +78,27 @@ RenderGraph::RenderGraph(ID3D12Device5Ptr device)
 		pass->SetInput("srvHeap", "geometryPass.srvHeap");
 		Add(pass);
 	}
+	// Reflections Pass
+	{
+		auto pass = MakeUnique<ReflectionPass>("reflectionPass");
+		pass->SetInput("renderTarget", "clear.renderTarget");
+		pass->SetInput("positions", "lightingPass.positions");
+		pass->SetInput("normals", "lightingPass.normals");
+		pass->SetInput("pixelsColor", "lightingPass.renderTarget");
+		Add(pass);
+	}
 	// GUI layer
 	{
 		auto pass = MakeUnique<GUIPass>("GUI");
-		pass->SetInput("positions", "lightingPass.positions");
-		pass->SetInput("normals", "lightingPass.normals");
+		pass->SetInput("positions", "reflectionPass.positions");
+		pass->SetInput("normals", "reflectionPass.normals");
 		pass->SetInput("diffuse", "lightingPass.diffuse");
 		pass->SetInput("specular", "lightingPass.specular");
 		pass->SetInput("ambientOcclusion", "lightingPass.ambientOcclusion");
 		Add(pass);
 	}
 
-	SetInputTarget("renderTarget", "lightingPass.renderTarget");
+	SetInputTarget("renderTarget", "reflectionPass.renderTarget");
 	Validate();
 	TransitionUnpropagatedResources();
 }
