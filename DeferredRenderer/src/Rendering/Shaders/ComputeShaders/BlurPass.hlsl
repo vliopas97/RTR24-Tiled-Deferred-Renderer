@@ -2,7 +2,7 @@
 #define HLSL
 #include "..\HLSLCompat.h"
 
-#define GROUP_SIZE 16
+#define GROUP_SIZE 12
 #define MAX_RADIUS 16
 #define MAX_KERNEL_SIZE (2 * MAX_RADIUS + 1)
 #define CACHE_SIZE (GROUP_SIZE + 2 * MAX_RADIUS)
@@ -28,7 +28,7 @@ static const float coeffs[MAX_KERNEL_SIZE] = Filters[filterID].Coeffs;
 static const uint kernelSize = 2 * RadiusBuffer.Radius + 1;
 
 // Reduce shared memory usage: Use row and column buffers instead of full 2D cache
-groupshared float3 cache[CACHE_SIZE][CACHE_SIZE];
+groupshared float4 cache[CACHE_SIZE][CACHE_SIZE];
 
 [numthreads(GROUP_SIZE, GROUP_SIZE, 1)]
 void main(uint3 globalID : SV_DispatchThreadID, uint3 localID : SV_GroupThreadID, uint3 groupID : SV_GroupID)
@@ -48,9 +48,9 @@ void main(uint3 globalID : SV_DispatchThreadID, uint3 localID : SV_GroupThreadID
         {
             uint2 texPos = workgroupOrigin + uint2(j, i);
             if (texPos.x < imageSize.x && texPos.y < imageSize.y)
-                cache[i][j] = InputImage.Load(uint3(texPos, 0)).rgb;
+                cache[i][j] = InputImage.Load(uint3(texPos, 0)).rgba;
             else
-                cache[i][j] = float3(0.0f, 0.0f, 0.0f);
+                cache[i][j] = float4(0.0f, 0.0f, 0.0f, 0.0f);
         }
     }
 
@@ -60,14 +60,14 @@ void main(uint3 globalID : SV_DispatchThreadID, uint3 localID : SV_GroupThreadID
         return;
 
     // Horizontal Pass
-    float3 blurH = float3(0.0f, 0.0f, 0.0f);
+    float4 blurH = float4(0.0f, 0.0f, 0.0f, 0.0f);
     for (uint i = 0; i < kernelSize; i++)
     {
         blurH += cache[localPos.y][localPos.x + i - RadiusBuffer.Radius] * coeffs[i];
     }
 
     if (screenPos.x < imageSize.x && screenPos.y < imageSize.y)
-        OutputImage[screenPos] = float4(blurH, 1.0f);
+        OutputImage[screenPos] = blurH;
 
     GroupMemoryBarrierWithGroupSync();
     
@@ -78,21 +78,21 @@ void main(uint3 globalID : SV_DispatchThreadID, uint3 localID : SV_GroupThreadID
         {
             uint2 texPos = workgroupOrigin + uint2(j, i);
             if (texPos.x < imageSize.x && texPos.y < imageSize.y)
-                cache[i][j] = OutputImage.Load(uint3(texPos, 0)).rgb; // Reload from horizontal pass
+                cache[i][j] = OutputImage.Load(uint3(texPos, 0)).rgba;
             else
-                cache[i][j] = float3(0.0f, 0.0f, 0.0f);
+                cache[i][j] = float4(0.0f, 0.0f, 0.0f, 0.0f);
         }
     }
 
     GroupMemoryBarrierWithGroupSync();
 
     // Vertical Pass
-    float3 blurV = float3(0.0f, 0.0f, 0.0f);
+    float4 blurV = float4(0.0f, 0.0f, 0.0f, 0.0f);
     for (uint i = 0; i < kernelSize; i++)
     {
         blurV += cache[localPos.y + i - RadiusBuffer.Radius][localPos.x] * coeffs[i];
     }
     
     if (screenPos.x < imageSize.x && screenPos.y < imageSize.y)
-        OutputImage[screenPos] = float4(blurV, 1.0f);
+        OutputImage[screenPos] = blurV;
 }

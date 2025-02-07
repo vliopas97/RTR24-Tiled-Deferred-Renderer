@@ -20,6 +20,7 @@ RenderGraph::RenderGraph(ID3D12Device5Ptr device)
 	RTVBuffer = MakeShared<ID3D12ResourcePtr>(Globals.RTVBuffer);
 	DSVBuffer = MakeShared<ID3D12ResourcePtr>(Globals.DSVBuffer);
 	Globals.CBGlobalConstants.CPUData.SSAOEnabled = true;
+	Globals.CBGlobalConstants.CPUData.SSREnabled = false;
 	Globals.CBGlobalConstants.CPUData.RadiusSSAO = 0.5f;
 	Globals.CBGlobalConstants.CPUData.IntensitySSAO = 2.0f;
 
@@ -81,10 +82,24 @@ RenderGraph::RenderGraph(ID3D12Device5Ptr device)
 	// Reflections Pass
 	{
 		auto pass = MakeUnique<ReflectionPass>("reflectionPass");
-		pass->SetInput("renderTarget", "clear.renderTarget");
+		//pass->SetInput("renderTarget", "clear.renderTarget");
 		pass->SetInput("positions", "lightingPass.positions");
 		pass->SetInput("normals", "lightingPass.normals");
 		pass->SetInput("pixelsColor", "lightingPass.renderTarget");
+		Add(pass);
+	}
+	// Blur reflections pass
+	{
+		auto pass = MakeUnique<CombinedBlurPassGlobal>("reflectionBlur", true, 7);
+		pass->SetInput("processedResource", "reflectionPass.renderTarget");
+		Add(pass);
+	}
+	// Blend Pass
+	{
+		auto pass = MakeUnique<BlendPass>("blend");
+		pass->SetInput("renderTarget", "clear.renderTarget");
+		pass->SetInput("pixelsColor", "reflectionPass.pixelsColor");
+		pass->SetInput("reflectionColor", "reflectionBlur.renderTarget");
 		Add(pass);
 	}
 	// GUI layer
@@ -98,7 +113,7 @@ RenderGraph::RenderGraph(ID3D12Device5Ptr device)
 		Add(pass);
 	}
 
-	SetInputTarget("renderTarget", "reflectionPass.renderTarget");
+	SetInputTarget("renderTarget", "blend.renderTarget");
 	Validate();
 	TransitionUnpropagatedResources();
 }

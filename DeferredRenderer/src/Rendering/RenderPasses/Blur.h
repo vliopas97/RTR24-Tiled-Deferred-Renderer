@@ -42,7 +42,7 @@ protected:
 class CombinedBlurPass : public RenderPass
 {
 public:
-	CombinedBlurPass(std::string&& name);
+	CombinedBlurPass(std::string&& name, bool flag = true);
 	virtual void Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene) override;
 protected:
 	virtual void InitResources(ID3D12Device5Ptr device) override;
@@ -61,13 +61,13 @@ protected:
 	static ID3D12ResourcePtr Filters;
 
 public:
-	static const uint GroupSize = 16;
+	static const uint GroupSize = 12;
 };
 
 class CombinedBlurPassGlobal : public CombinedBlurPass
 {
 public:
-	CombinedBlurPassGlobal(std::string&& name, uint radius = 5);
+	CombinedBlurPassGlobal(std::string&& name, bool flag = true, uint radius = 5);
 	void Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene) override;
 	inline void SetRadius(uint radius);
 protected:

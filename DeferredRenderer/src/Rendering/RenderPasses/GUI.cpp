@@ -120,11 +120,18 @@ void GUIPass::GBuffersViewerWindow() const
 
 	ImGui::Image((ImTextureID)GPUHandlesGBuffers[selectedItem].ptr, imageSize);
 
-	BOOL& ssaoEnabled = Globals.CBGlobalConstants.CPUData.SSAOEnabled;
-	bool checkboxState = (ssaoEnabled != 0);
+	BOOL& ssrEnabled = Globals.CBGlobalConstants.CPUData.SSREnabled;
+	bool checkboxStateSSR = (ssrEnabled != 0);
 
-	if (ImGui::Checkbox("Enable SSAO", &checkboxState))
-		ssaoEnabled = checkboxState ? 1 : 0;
+	if (ImGui::Checkbox("Enable SSR", &checkboxStateSSR))
+		ssrEnabled = checkboxStateSSR ? 1 : 0;
+
+	BOOL& ssaoEnabled = Globals.CBGlobalConstants.CPUData.SSAOEnabled;
+	bool checkboxStateSSAO = (ssaoEnabled != 0);
+
+	if (ImGui::Checkbox("Enable SSAO", &checkboxStateSSAO))
+		ssaoEnabled = checkboxStateSSAO ? 1 : 0;
+
 	ImGui::SliderFloat("SSAO Radius", &Globals.CBGlobalConstants.CPUData.RadiusSSAO, 0.01f, 2.0f, "%.02f");
 	ImGui::SliderFloat("SSAO Intensity", &Globals.CBGlobalConstants.CPUData.IntensitySSAO, 0.5f, 4.0f, "%.1f");
 

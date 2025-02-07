@@ -10,6 +10,7 @@
 #include "RenderPasses/Clear.h"
 #include "RenderPasses/Forward.h"
 #include "RenderPasses/ReflectionPass.h"
+#include "RenderPasses/Blend.h"
 
 class RenderGraph
 {

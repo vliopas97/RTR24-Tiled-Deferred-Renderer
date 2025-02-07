@@ -140,9 +140,9 @@ float4 main(float4 position : SV_Position) : SV_Target
     float reflectiveness = Positions.Sample(smplr, texCoords).a;
     float4 originalColor = PixelsColor.Sample(smplr, texCoords);
     
-    if (reflectiveness == 0 || length(normalView) == 0.0f)
-        return originalColor;
-
+    if (reflectiveness == 0 || length(normalView) == 0.0f || !globalConstants.SSREnabled)
+        discard;
+    
     float4 positionScreen = float4(0, 0, 0, 0);
     float3 reflectionScreen = float3(0, 0, 0);
     float maxDistance = 0;
@@ -153,8 +153,8 @@ float4 main(float4 position : SV_Position) : SV_Target
     bool intersects = traceIntersection(positionScreen.xyz, reflectionScreen, maxDistance, screenDims, intersection);
     
     float4 reflectionColor = computeReflectedColor(intersects, intersection, originalColor);
+    reflectionColor.a = reflectiveness;
+    //color = (1.0f - reflectiveness) * originalColor + reflectiveness * reflectionColor;
     
-    color = (1.0f - reflectiveness) * originalColor + reflectiveness * reflectionColor;
-    
-    return color;
+    return reflectionColor;;
 }

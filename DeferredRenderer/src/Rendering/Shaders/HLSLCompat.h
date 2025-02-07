@@ -29,6 +29,7 @@ struct PipelineConstants
 	mat4x4 ViewProjection;
 	mat4x4 Projection;
 	BOOL SSAOEnabled;
+	BOOL SSREnabled;
 	float RadiusSSAO;
 	float IntensitySSAO;
 };

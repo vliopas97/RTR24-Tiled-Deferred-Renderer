@@ -279,11 +279,11 @@ void VerticalBlurPass::InitResources(ID3D12Device5Ptr device)
 	Controls.Resource.Tick();
 }
 
-CombinedBlurPass::CombinedBlurPass(std::string&& name)
+CombinedBlurPass::CombinedBlurPass(std::string&& name, bool flag)
 	:RenderPass(std::move(name))
 {
 	Register<PassInput<ID3D12ResourcePtr>>("processedResource", SRVToBlur, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	Register<PassOutput<ID3D12ResourcePtr>>("processedResource", SRVToBlur, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	Register<PassOutput<ID3D12ResourcePtr>>("processedResource", SRVToBlur, flag ? D3D12_RESOURCE_STATE_RENDER_TARGET : D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	Register<PassOutput<ID3D12ResourcePtr>>("renderTarget", BlurOutput, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 }
 
@@ -452,8 +452,8 @@ void CombinedBlurPass::InitStaticResources(ID3D12Device5Ptr device)
 	cmdList->Reset(cmdAllocator, nullptr);
 }
 
-CombinedBlurPassGlobal::CombinedBlurPassGlobal(std::string&& name, uint radius)
-	:CombinedBlurPass(std::move(name))
+CombinedBlurPassGlobal::CombinedBlurPassGlobal(std::string&& name, bool flag, uint radius)
+	:CombinedBlurPass(std::move(name), flag)
 {
 	SetRadius(radius);
 }

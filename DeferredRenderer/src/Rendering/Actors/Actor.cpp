@@ -15,9 +15,11 @@ Actor::Actor(ID3D12Device5Ptr device, const Camera& camera)
     ActorInfo->Resource.CPUData.Material.SpecularIntensity = 1.0f;
     ActorInfo->Resource.CPUData.Material.Shininess = 12.0f;
     ActorInfo->Resource.CPUData.Material.Reflectiveness = 0.0f;
+    Roughness.Resource.CPUData = 0.0f;
 
     AddResourceToMap<ForwardRenderPass>(*ActorInfo, LightCBuffer + 1);
     AddResourceToMap<GeometryPass>(*ActorInfo, 3);
+    AddResourceToMap<CombinedBlurPass>(Roughness, 3);
 }
 
 void Actor::Tick()

@@ -1,6 +1,12 @@
 #include "Model.h"
 #include <filesystem>
 
+uint RoughnessToKernel(float roughness)
+{
+	return static_cast<uint>(1.0f + roughness * (16.0f - 1.0f));
+}
+
+
 Model::Model(ID3D12Device5Ptr device, 
 			 const Camera& camera, 
 			 const aiMesh& mesh,
@@ -43,7 +49,11 @@ Model::Model(ID3D12Device5Ptr device,
 	material->GetTexture(aiTextureType_DIFFUSE, 0, &filename);
 
 	std::string file = filename.C_Str();
-	if (file.find("floor") != std::string::npos) data.Material.Reflectiveness = 0.85f;
+	if (file.find("floor") != std::string::npos) 
+	{
+		data.Material.Reflectiveness = 0.85f;
+		Roughness.Resource.CPUData = RoughnessToKernel(0.7f);
+	}
 
 	data.KdID = findTextureIndex(filename);
 	material->GetTexture(aiTextureType_NORMALS, 0, &filename);

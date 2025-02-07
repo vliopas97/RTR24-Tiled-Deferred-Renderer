@@ -9,6 +9,7 @@
 #include "Rendering/RenderPasses/GUI.h"
 #include "Rendering/RenderPasses/Clear.h"
 #include "Rendering/RenderPasses/Forward.h"
+#include "Rendering/RenderPasses/Blur.h"
 
 #include <typeindex>
 
@@ -82,6 +83,7 @@ protected:
 	Resources2RenderPassMap ResourceMap;
 
 	UniquePtr<ResourceGPU_CBV<ActorData>> ActorInfo;
+	mutable ResourceGPU_CBV<uint> Roughness;
 
 	friend class Scene;
 };
@@ -109,6 +111,16 @@ inline void Actor::Bind<GeometryPass>(ID3D12GraphicsCommandList4Ptr cmdList) con
 	cmdList->IASetIndexBuffer(&IBuffer.GetView());
 	BindLocalResources<GeometryPass>(cmdList);
 	cmdList->DrawIndexedInstanced(IBuffer.GetIndexCount(), 1, 0, 0, 0);
+}
+
+template<>
+inline void Actor::Bind<CombinedBlurPass>(ID3D12GraphicsCommandList4Ptr cmdList) const
+{
+	if (Roughness.Resource.CPUData = 0) return;
+	Roughness.BindCompute(cmdList, 3);
+	UINT threadGroupX = (Globals.WindowDimensions.x + 127) / (CombinedBlurPass::GroupSize);  // Assuming 16x16 thread group size
+	UINT threadGroupY = (Globals.WindowDimensions.y + 127) / (CombinedBlurPass::GroupSize);
+	cmdList->Dispatch(threadGroupX, threadGroupY, 1);
 }
 
 class Cube : public Actor
