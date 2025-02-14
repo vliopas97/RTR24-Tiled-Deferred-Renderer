@@ -4,16 +4,17 @@ This is the first submission of the project for Real-Time Rendering. So far, bas
 
 * Loading a scene ([Sponza Atrium](https://www.cryengine.com/asset-db/product/crytek/sponza-sample-scene))
 * Basic lighting (Phong) with diffuse, normal and specular textures being loaded.\
- TBN transformations are being used for normals and alpha testing is performed to draw sprites correctly.
-* For the first submission I only use one, directional light representing the sun to illuminate the whole scene, I will add more light sources locally, represented by sphere primitives in a later commit.
-* Debug camera (manual-only movement support for now)
+TBN transformations are being used for normals and alpha testing is performed to draw sprites correctly.
 * GUI layer
+* Deffered Shading
+* Screen Space Ambient Occlusion
+* Screen Space Reflection (work in progress)
 
 ## Installation
 
 All necessary libraries are located in the *ThirdParty* folder.\
 To build dependencies and project files, run the *GenerateProjects.bat* file, in the root folder.\
- The project uses DirectX12 so it only runs on Windows environments.
+The project uses DirectX12 so it only runs on Windows environments.
 
 ## Key Bindings
 
