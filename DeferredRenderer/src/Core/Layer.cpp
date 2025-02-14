@@ -78,7 +78,7 @@ void ImGuiLayer::End(ID3D12GraphicsCommandList4Ptr cmdList)
 
 	ImGui::Render();
 
-	ID3D12DescriptorHeap* descriptorHeaps[] = { DescriptorHeap.GetInterfacePtr() };
+	ID3D12DescriptorHeap* descriptorHeaps[] = { DescriptorHeap.Get() };
 	cmdList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
 
 	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), cmdList);

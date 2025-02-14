@@ -61,7 +61,7 @@ struct RootSignature
 	RootSignature(ID3D12Device5Ptr device, Fn f, Args... args)
 	{
 		RootSignaturePtr = f(args...);
-		Interface = RootSignaturePtr.GetInterfacePtr();
+		Interface = RootSignaturePtr.Get();
 		Subobject.Type = D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE;
 		Subobject.pDesc = &Interface;
 	}

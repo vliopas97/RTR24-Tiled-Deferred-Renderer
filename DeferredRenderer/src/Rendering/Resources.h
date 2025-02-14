@@ -16,6 +16,9 @@ template <typename T>
 inline constexpr bool is_com_ptr_v<_com_ptr_t<T>> = true;
 
 template <typename T>
+inline constexpr bool is_com_ptr_v<ComPtrWrapper<T>> = true;
+
+template <typename T>
 concept ResourceType = is_com_ptr_v<T>;
 
 template <typename T>

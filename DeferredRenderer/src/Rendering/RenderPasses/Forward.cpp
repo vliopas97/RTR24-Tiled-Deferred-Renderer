@@ -80,7 +80,7 @@ void ForwardRenderPass::InitPipelineState()
 	// Describe and create the graphics pipeline state object (PSO).
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 	psoDesc.InputLayout = layout;
-	psoDesc.pRootSignature = RootSignatureData.RootSignaturePtr.GetInterfacePtr();
+	psoDesc.pRootSignature = RootSignatureData.RootSignaturePtr.Get();
 	psoDesc.VS = CD3DX12_SHADER_BYTECODE(vertexShader.GetBlob());
 	psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.GetBlob());
 	psoDesc.RasterizerState = rasterizerDesc;

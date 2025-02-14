@@ -23,7 +23,7 @@ void ReflectionPass::Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene &
 void ReflectionPass::Bind(ID3D12GraphicsCommandList4Ptr cmdList) const
 {
 	//RootSignatureData
-	cmdList->SetGraphicsRootSignature(RootSignatureData.RootSignaturePtr.GetInterfacePtr());
+	cmdList->SetGraphicsRootSignature(RootSignatureData.RootSignaturePtr.Get());
 
 	D3D12_VIEWPORT viewport = { 0.0f, 0.0f, (FLOAT)Globals.WindowDimensions.x, (FLOAT)Globals.WindowDimensions.y, 0.0f, 1.0f };
 	cmdList->RSSetViewports(1, &viewport);
@@ -139,7 +139,7 @@ void ReflectionPass::InitPipelineState()
 	// Describe and create the graphics pipeline state object (PSO).
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 	psoDesc.InputLayout = layoutDesc;
-	psoDesc.pRootSignature = RootSignatureData.RootSignaturePtr.GetInterfacePtr();
+	psoDesc.pRootSignature = RootSignatureData.RootSignaturePtr.Get();
 	psoDesc.VS = CD3DX12_SHADER_BYTECODE(vertexShader.GetBlob());
 	psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.GetBlob());
 	psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);

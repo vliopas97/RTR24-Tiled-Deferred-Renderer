@@ -7,7 +7,7 @@ RootSignature::RootSignature(ID3D12Device5Ptr device)
 {
 	D3D12_ROOT_SIGNATURE_DESC desc{};
 	RootSignaturePtr = D3D::CreateRootSignature(device, desc);
-	Interface = RootSignaturePtr.GetInterfacePtr();
+	Interface = RootSignaturePtr.Get();
 	Subobject.pDesc = &Interface;
 	Subobject.Type = D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE;
 }
@@ -15,7 +15,7 @@ RootSignature::RootSignature(ID3D12Device5Ptr device)
 RootSignature::RootSignature(ID3D12Device5Ptr device, ID3D12RootSignaturePtr rootSig)
 {
 	RootSignaturePtr = rootSig;
-	Interface = RootSignaturePtr.GetInterfacePtr();
+	Interface = RootSignaturePtr.Get();
 	Subobject.pDesc = &Interface;
 	Subobject.Type = D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE;
 }
@@ -39,7 +39,7 @@ void RootSignature::Build(ID3D12Device5Ptr device, D3D12_ROOT_SIGNATURE_FLAGS fl
 	desc.Flags = flags;
 
 	RootSignaturePtr = D3D::CreateRootSignature(device, desc);
-	Interface = RootSignaturePtr.GetInterfacePtr();
+	Interface = RootSignaturePtr.Get();
 }
 
 D3D12_DESCRIPTOR_RANGE DescriptorRangeBuilder::CreateRange(D3D12_DESCRIPTOR_RANGE_TYPE type, UINT numDescriptors, UINT baseShaderRegister, UINT registerSpace, UINT offsetInDescriptorsFromTableStart)

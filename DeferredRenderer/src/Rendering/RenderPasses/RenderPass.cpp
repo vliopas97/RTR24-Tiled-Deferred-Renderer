@@ -56,7 +56,7 @@ void RenderPass::Init(ID3D12Device5Ptr device)
 void RenderPass::Bind(ID3D12GraphicsCommandList4Ptr cmdList) const
 {
 	//RootSignatureData
-	cmdList->SetGraphicsRootSignature(RootSignatureData.RootSignaturePtr.GetInterfacePtr());
+	cmdList->SetGraphicsRootSignature(RootSignatureData.RootSignaturePtr.Get());
 
 	D3D12_VIEWPORT viewport = { 0.0f, 0.0f, (FLOAT)Globals.WindowDimensions.x, (FLOAT)Globals.WindowDimensions.y, 0.0f, 1.0f };
 	cmdList->RSSetViewports(1, &viewport);

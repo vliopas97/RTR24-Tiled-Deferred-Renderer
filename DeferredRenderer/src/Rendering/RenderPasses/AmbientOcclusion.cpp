@@ -14,7 +14,7 @@ AmbientOcclusionPass::AmbientOcclusionPass(std::string&& name)
 void AmbientOcclusionPass::Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene)
 {
 	//RootSignatureData
-	cmdList->SetGraphicsRootSignature(RootSignatureData.RootSignaturePtr.GetInterfacePtr());
+	cmdList->SetGraphicsRootSignature(RootSignatureData.RootSignaturePtr.Get());
 
 	D3D12_VIEWPORT viewport = { 0.0f, 0.0f, (FLOAT)Globals.WindowDimensions.x, (FLOAT)Globals.WindowDimensions.y, 0.0f, 1.0f };
 	cmdList->RSSetViewports(1, &viewport);
@@ -80,7 +80,6 @@ void AmbientOcclusionPass::InitResources(ID3D12Device5Ptr device)
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
 		IID_PPV_ARGS(&stagingBufferRandTex)));
-
 	D3D12_SUBRESOURCE_DATA textureData{};
 	textureData.pData = noiseTextureFloats.data();
 	textureData.RowPitch = resDesc.Width * sizeof(glm::float3);
@@ -200,7 +199,7 @@ void AmbientOcclusionPass::InitResources(ID3D12Device5Ptr device)
 	auto srvHeap = D3D::CreateDescriptorHeap(device, 4, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
 	SRVHeap = MakeShared<ID3D12DescriptorHeapPtr>(srvHeap);
 
-	D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = SRVHeap->GetInterfacePtr()->GetCPUDescriptorHandleForHeapStart();
+	D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = (*SRVHeap)->GetCPUDescriptorHandleForHeapStart();
 	UINT srvDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 	device->CreateShaderResourceView(*Positions, &srvDesc, srvHandle);
@@ -274,7 +273,7 @@ void AmbientOcclusionPass::InitPipelineState()
 	// Describe and create the graphics pipeline state object (PSO).
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 	psoDesc.InputLayout = layoutDesc;
-	psoDesc.pRootSignature = RootSignatureData.RootSignaturePtr.GetInterfacePtr();
+	psoDesc.pRootSignature = RootSignatureData.RootSignaturePtr.Get();
 	psoDesc.VS = CD3DX12_SHADER_BYTECODE(vertexShader.GetBlob());
 	psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.GetBlob());
 	psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);

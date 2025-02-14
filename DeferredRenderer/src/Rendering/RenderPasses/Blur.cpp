@@ -115,7 +115,7 @@ BlurPass::BlurPass(std::string&& name)
 void BlurPass::Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene)
 {
 	//RootSignatureData
-	cmdList->SetGraphicsRootSignature(RootSignatureData.RootSignaturePtr.GetInterfacePtr());
+	cmdList->SetGraphicsRootSignature(RootSignatureData.RootSignaturePtr.Get());
 
 	D3D12_VIEWPORT viewport = { 0.0f, 0.0f, (FLOAT)Globals.WindowDimensions.x, (FLOAT)Globals.WindowDimensions.y, 0.0f, 1.0f };
 	cmdList->RSSetViewports(1, &viewport);
@@ -231,7 +231,7 @@ void BlurPass::InitPipelineState()
 	// Describe and create the graphics pipeline state object (PSO).
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 	psoDesc.InputLayout = layoutDesc;
-	psoDesc.pRootSignature = RootSignatureData.RootSignaturePtr.GetInterfacePtr();
+	psoDesc.pRootSignature = RootSignatureData.RootSignaturePtr.Get();
 	psoDesc.VS = CD3DX12_SHADER_BYTECODE(vertexShader.GetBlob());
 	psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.GetBlob());
 	psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
@@ -289,7 +289,7 @@ CombinedBlurPass::CombinedBlurPass(std::string&& name, bool flag)
 
 void CombinedBlurPass::Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene)
 {
-	cmdList->SetComputeRootSignature(RootSignatureData.RootSignaturePtr.GetInterfacePtr());
+	cmdList->SetComputeRootSignature(RootSignatureData.RootSignaturePtr.Get());
 	Heaps.BindCompute(cmdList);
 	scene.Bind<CombinedBlurPass>(cmdList);
 }
@@ -370,7 +370,7 @@ void CombinedBlurPass::InitPipelineState()
 
     // Describe and create the compute pipeline state object (PSO)
     D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
-    psoDesc.pRootSignature = RootSignatureData.RootSignaturePtr.GetInterfacePtr();
+    psoDesc.pRootSignature = RootSignatureData.RootSignaturePtr.Get();
     psoDesc.CS = CD3DX12_SHADER_BYTECODE(computeShader.GetBlob());
 
     // Create the compute pipeline state
@@ -460,7 +460,7 @@ CombinedBlurPassGlobal::CombinedBlurPassGlobal(std::string&& name, bool flag, ui
 
 void CombinedBlurPassGlobal::Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene & scene)
 {
-	cmdList->SetComputeRootSignature(RootSignatureData.RootSignaturePtr.GetInterfacePtr());
+	cmdList->SetComputeRootSignature(RootSignatureData.RootSignaturePtr.Get());
 	Heaps.BindCompute(cmdList);
 	FilterRadius.BindCompute(cmdList, 3);
 

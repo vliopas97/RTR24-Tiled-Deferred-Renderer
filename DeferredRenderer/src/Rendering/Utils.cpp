@@ -84,7 +84,7 @@ void D3D::ResourceBarrier(ID3D12GraphicsCommandList4Ptr cmdList, ID3D12ResourceP
 uint64_t D3D::SubmitCommandList(ID3D12GraphicsCommandList4Ptr cmdList, ID3D12CommandQueuePtr cmdQueue, ID3D12FencePtr fence, uint64_t fenceValue)
 {
 	cmdList->Close();
-	ID3D12CommandList* list = cmdList.GetInterfacePtr();
+	ID3D12CommandList* list = cmdList.Get();
 	cmdQueue->ExecuteCommandLists(1, &list);
 	cmdQueue->Signal(fence, ++fenceValue);
 	return fenceValue;
@@ -96,7 +96,7 @@ ID3D12RootSignaturePtr D3D::CreateRootSignature(ID3D12Device5Ptr pDevice,
 	ID3DBlobPtr sigBlob;
 	ID3DBlobPtr errorBlob;
 	GRAPHICS_ASSERT_W_MSG(D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1, &sigBlob, &errorBlob),
-						  convertBlobToString(errorBlob.GetInterfacePtr()));
+						  convertBlobToString(errorBlob.Get()));
 	ID3D12RootSignaturePtr rootSig;
 	GRAPHICS_ASSERT(pDevice->CreateRootSignature(0, sigBlob->GetBufferPointer(), sigBlob->GetBufferSize(), IID_PPV_ARGS(&rootSig)));
 	return rootSig;

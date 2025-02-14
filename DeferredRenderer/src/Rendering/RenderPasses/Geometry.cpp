@@ -22,7 +22,7 @@ GeometryPass::GeometryPass(std::string&& name) :
 void GeometryPass::Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene)
 {
 	//RootSignatureData
-	cmdList->SetGraphicsRootSignature(RootSignatureData.RootSignaturePtr.GetInterfacePtr());
+	cmdList->SetGraphicsRootSignature(RootSignatureData.RootSignaturePtr.Get());
 
 	D3D12_VIEWPORT viewport = { 0.0f, 0.0f, (FLOAT)Globals.WindowDimensions.x, (FLOAT)Globals.WindowDimensions.y, 0.0f, 1.0f };
 	cmdList->RSSetViewports(1, &viewport);
@@ -110,7 +110,7 @@ void GeometryPass::InitResources(ID3D12Device5Ptr device)
 	auto srvHeapRO = D3D::CreateDescriptorHeap(device, 4, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, false);
 	SRVHeapRO = MakeShared<ID3D12DescriptorHeapPtr>(srvHeapRO);
 
-	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = RTVHeap->GetInterfacePtr()->GetCPUDescriptorHandleForHeapStart();
+	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = RTVHeap->Get()->GetCPUDescriptorHandleForHeapStart();
 	UINT rtvDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
 	// Creating Render Target Views
@@ -138,7 +138,7 @@ void GeometryPass::InitResources(ID3D12Device5Ptr device)
 	srvDesc.Texture2D.MostDetailedMip = 0;
 	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
 
-	D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = SRVHeapRO->GetInterfacePtr()->GetCPUDescriptorHandleForHeapStart();
+	D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = SRVHeapRO->Get()->GetCPUDescriptorHandleForHeapStart();
 	UINT srvDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 	device->CreateShaderResourceView(*Positions, &srvDesc, srvHandle);
@@ -206,7 +206,7 @@ void GeometryPass::InitPipelineState()
 	// Describe and create the graphics pipeline state object (PSO).
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 	psoDesc.InputLayout = layout;
-	psoDesc.pRootSignature = RootSignatureData.RootSignaturePtr.GetInterfacePtr();
+	psoDesc.pRootSignature = RootSignatureData.RootSignaturePtr.Get();
 	psoDesc.VS = CD3DX12_SHADER_BYTECODE(vertexShader.GetBlob());
 	psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.GetBlob());
 	psoDesc.RasterizerState = rasterizerDesc;

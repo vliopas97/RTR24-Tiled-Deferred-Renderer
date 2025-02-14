@@ -38,6 +38,8 @@
 #include <backends\imgui_impl_dx12.h>
 #include <backends\imgui_impl_win32.h>
 
+#include "ComPtr.h"
+
 static constexpr const uint32_t DefaultSwapChainBuffers = 3;
 static constexpr const float aspectRatio = 16.0f / 9.0f;
 
@@ -46,7 +48,7 @@ constexpr const uint32_t NumUserDescriptorRanges = 16;
 constexpr const uint32_t NumGlobalSRVDescriptorRanges = 7 + NumUserDescriptorRanges;
 constexpr const uint32_t NumGlobalCBVDescriptorRanges = 7;
 
-#define MAKE_SMART_COM_PTR(_a) _COM_SMARTPTR_TYPEDEF(_a, __uuidof(_a))
+#define MAKE_SMART_COM_PTR(_a) using _a##Ptr = ComPtrWrapper<_a>;
 MAKE_SMART_COM_PTR(ID3D12Device5);
 MAKE_SMART_COM_PTR(ID3D12GraphicsCommandList4);
 MAKE_SMART_COM_PTR(ID3D12CommandQueue);
