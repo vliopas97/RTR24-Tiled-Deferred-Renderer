@@ -16,8 +16,8 @@ private:
 	SharedPtr<ID3D12ResourcePtr> Normals;
 	SharedPtr<ID3D12ResourcePtr> PixelsColor;
 
-	ID3D12DescriptorHeapPtr RTVHeap{};
-	ID3D12DescriptorHeapPtr SRVHeap{};
+	DX::DescriptorHeap RTVHeap{};
+	DX::DescriptorHeap SRVHeap{};
 
 	D3D12_CPU_DESCRIPTOR_HANDLE RTVHandle;
 };

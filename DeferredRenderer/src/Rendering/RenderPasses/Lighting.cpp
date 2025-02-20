@@ -10,7 +10,7 @@ LightingPass::LightingPass(std::string&& name)
 	Register<PassInput<ID3D12ResourcePtr>>("diffuse", Diffuse, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	Register<PassInput<ID3D12ResourcePtr>>("specular", Specular, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	Register<PassInput<ID3D12ResourcePtr>>("ambientOcclusion", AmbientOcclusion, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	Register<PassInput<ID3D12DescriptorHeapPtr>>("srvHeap", GBufferHeap);
+	Register<PassInput<DX::DescriptorHeap>>("srvHeap", GBufferHeap);
 
 	Register<PassOutput<ID3D12ResourcePtr>>("renderTarget", RTVBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	Register<PassOutput<ID3D12ResourcePtr>>("positions", Positions, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
@@ -18,7 +18,7 @@ LightingPass::LightingPass(std::string&& name)
 	Register<PassOutput<ID3D12ResourcePtr>>("diffuse", Diffuse, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	Register<PassOutput<ID3D12ResourcePtr>>("specular", Specular, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	Register<PassOutput<ID3D12ResourcePtr>>("ambientOcclusion", AmbientOcclusion, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	Register<PassOutput<ID3D12DescriptorHeapPtr>>("srvHeap", GBufferHeap);
+	Register<PassOutput<DX::DescriptorHeap>>("srvHeap", GBufferHeap);
 }
 
 void LightingPass::Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene)
@@ -39,10 +39,12 @@ void LightingPass::Bind(ID3D12GraphicsCommandList4Ptr cmdList) const
 	cmdList->RSSetScissorRects(1, &scissorRect);
 
 	const float clearColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-	cmdList->ClearRenderTargetView(RTVHandle, clearColor, 0, nullptr);
-	cmdList->OMSetRenderTargets(1, &RTVHandle, FALSE, nullptr);
+	cmdList->ClearRenderTargetView(RTVHeap.begin()->CPUHandle, clearColor, 0, nullptr);
+	cmdList->OMSetRenderTargets(1, &RTVHeap.begin()->CPUHandle, FALSE, nullptr);
 
-	Heaps.Bind(cmdList);
+	// Bind Heaps
+	for (size_t i = 0; i < Heaps.size(); i++)
+		Heaps[i].Bind(cmdList, i);
 
 	cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	cmdList->DrawInstanced(3, 1, 0, 0);
@@ -58,9 +60,8 @@ void LightingPass::InitResources(ID3D12Device5Ptr device)
 	srvDesc.Texture2D.MostDetailedMip = 0;
 	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
 
-	AOHeap = D3D::CreateDescriptorHeap(device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
-	D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = AOHeap->GetCPUDescriptorHandleForHeapStart();
-	device->CreateShaderResourceView(*AmbientOcclusion, &srvDesc, srvHandle);
+	AOHeap.Create(device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
+	device->CreateShaderResourceView(*AmbientOcclusion, &srvDesc, AOHeap.begin()->CPUHandle);
 
 	// Create Render Target
 	D3D12_CLEAR_VALUE clearValue = {};
@@ -89,17 +90,14 @@ void LightingPass::InitResources(ID3D12Device5Ptr device)
 	RTVBuffer = MakeShared<ID3D12ResourcePtr>(renderTarget);
 
 	// RTV Heap
-	auto rtvHeap = D3D::CreateDescriptorHeap(device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, false);
-	RTVHeap = MakeShared<ID3D12DescriptorHeapPtr>(rtvHeap);
+	RTVHeap.Create(device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, false);
+	device->CreateRenderTargetView(*RTVBuffer, nullptr, RTVHeap.begin()->CPUHandle);
 
-	RTVHandle = rtvHeap->GetCPUDescriptorHandleForHeapStart();
-	device->CreateRenderTargetView(*RTVBuffer, nullptr, RTVHandle);
-
-	Heaps.PushBack(*GBufferHeap);
-	Heaps.PushBack(AOHeap);
-	Heaps.PushBack(Globals.SamplerHeap);
-	Heaps.PushBack(Globals.LightsHeap);
-	Heaps.PushBack(Globals.CBVHeap);
+	Heaps.push_back(*GBufferHeap);
+	Heaps.push_back(AOHeap);
+	Heaps.push_back(Globals.SamplerHeap);
+	Heaps.push_back(Globals.LightsHeap);
+	Heaps.push_back(Globals.CBVHeap);
 }
 
 void LightingPass::InitRootSignature()

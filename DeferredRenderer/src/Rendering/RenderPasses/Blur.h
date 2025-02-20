@@ -13,10 +13,10 @@ protected:
 	virtual void InitRootSignature() override;
 	virtual void InitPipelineState() override;
 protected:
-	ID3D12DescriptorHeapPtr SRVHeap;
-	ID3D12DescriptorHeapPtr CBVHeap;
+	DX::DescriptorHeap SRVHeap;
+	DX::DescriptorHeap CBVHeap;
 
-	SharedPtr<ID3D12DescriptorHeapPtr> RTVHeap{};
+	DX::DescriptorHeap RTVHeap;
 	D3D12_CPU_DESCRIPTOR_HANDLE RTVHandle{};
 
 	SharedPtr<ID3D12ResourcePtr> SRVToBlur;
@@ -51,13 +51,13 @@ protected:
 private:
 	void InitStaticResources(ID3D12Device5Ptr device);
 protected:
-	ID3D12DescriptorHeapPtr SRVHeap;
-	ID3D12DescriptorHeapPtr UAVHeap;
+	DX::DescriptorHeap SRVHeap;
+	DX::DescriptorHeap UAVHeap;
 
 	SharedPtr<ID3D12ResourcePtr> SRVToBlur;
 	SharedPtr<ID3D12ResourcePtr> BlurOutput;
 
-	static ID3D12DescriptorHeapPtr FiltersHeap;
+	static DX::DescriptorHeap FiltersHeap;
 	static ID3D12ResourcePtr Filters;
 
 public:
@@ -74,5 +74,5 @@ protected:
 	void InitResources(ID3D12Device5Ptr device) override;
 private:
 	ResourceGPU_CBV<uint> FilterRadius;
-	ID3D12DescriptorHeapPtr	CBVHeap;
+	DX::DescriptorHeap	CBVHeap;
 };

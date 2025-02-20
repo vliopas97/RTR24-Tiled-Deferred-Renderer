@@ -2,7 +2,7 @@
 #include "Rendering/Shader.h"
 #include "Scene.h"
 
-ID3D12DescriptorHeapPtr CombinedBlurPassGlobal::FiltersHeap = nullptr;
+DX::DescriptorHeap CombinedBlurPassGlobal::FiltersHeap{};
 ID3D12ResourcePtr CombinedBlurPassGlobal::Filters = nullptr;
 
 // Gaussian filter generation code
@@ -125,10 +125,13 @@ void BlurPass::Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene)
 	cmdList->RSSetScissorRects(1, &scissorRect);
 
 	const float clearColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-	cmdList->ClearRenderTargetView(RTVHandle, clearColor, 0, nullptr);
-	cmdList->OMSetRenderTargets(1, &RTVHandle, FALSE, nullptr); // NEED CUSTOM RTV!
+	cmdList->ClearRenderTargetView(RTVHeap.begin()->CPUHandle, clearColor, 0, nullptr);
+	cmdList->OMSetRenderTargets(1, &RTVHeap.begin()->CPUHandle, FALSE, nullptr); // NEED CUSTOM RTV!
+	
+	//Heaps.Bind(cmdList);
+	for (size_t i = 0; i < Heaps.size(); i++)
+		 Heaps[i].Bind(cmdList, i);
 
-	Heaps.Bind(cmdList);
 	Controls.Bind(cmdList, 2);
 
 	cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -145,13 +148,11 @@ void BlurPass::InitResources(ID3D12Device5Ptr device)
 	srvDesc.Texture2D.MostDetailedMip = 0;
 	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
 
-	SRVHeap = D3D::CreateDescriptorHeap(device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
-	D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = SRVHeap->GetCPUDescriptorHandleForHeapStart();
-	device->CreateShaderResourceView(*SRVToBlur, &srvDesc, srvHandle);
+	SRVHeap.Create(device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
+	device->CreateShaderResourceView(*SRVToBlur, &srvDesc, SRVHeap.begin()->CPUHandle);
 
-	CBVHeap = D3D::CreateDescriptorHeap(device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
-	D3D12_CPU_DESCRIPTOR_HANDLE cbvHandle = CBVHeap->GetCPUDescriptorHandleForHeapStart();
-	Controls.Resource.Init(device, cbvHandle);
+	CBVHeap.Create(device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
+	Controls.Resource.Init(device, CBVHeap.begin()->CPUHandle);
 
 	// Create Render Target
 	D3D12_CLEAR_VALUE clearValue = {};
@@ -180,14 +181,11 @@ void BlurPass::InitResources(ID3D12Device5Ptr device)
 	RTVBuffer = MakeShared<ID3D12ResourcePtr>(renderTarget);
 
 	// RTV Heap
-	auto rtvHeap = D3D::CreateDescriptorHeap(device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, false);
-	RTVHeap = MakeShared<ID3D12DescriptorHeapPtr>(rtvHeap);
+	RTVHeap.Create(device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, false);
+	device->CreateRenderTargetView(*RTVBuffer, nullptr, RTVHeap.begin()->CPUHandle);
 
-	RTVHandle = rtvHeap->GetCPUDescriptorHandleForHeapStart();
-	device->CreateRenderTargetView(*RTVBuffer, nullptr, RTVHandle);
-
-	Heaps.PushBack(Globals.SamplerHeap);
-	Heaps.PushBack(SRVHeap);
+	Heaps.push_back(Globals.SamplerHeap);
+	Heaps.push_back(SRVHeap);
 	//Heaps.PushBack(CBVHeap);
 }
 
@@ -290,7 +288,8 @@ CombinedBlurPass::CombinedBlurPass(std::string&& name, bool flag)
 void CombinedBlurPass::Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene)
 {
 	cmdList->SetComputeRootSignature(RootSignatureData.RootSignaturePtr.Get());
-	Heaps.BindCompute(cmdList);
+	for (size_t i = 0; i < Heaps.size(); i++)
+		Heaps[i].Bind(cmdList, i);
 	scene.Bind<CombinedBlurPass>(cmdList);
 }
 
@@ -305,9 +304,8 @@ void CombinedBlurPass::InitResources(ID3D12Device5Ptr device)
 	srvDesc.Texture2D.MostDetailedMip = 0;
 	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
 
-	SRVHeap = D3D::CreateDescriptorHeap(device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
-	D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = SRVHeap->GetCPUDescriptorHandleForHeapStart();
-	device->CreateShaderResourceView(*SRVToBlur, &srvDesc, srvHandle);
+	SRVHeap.Create(device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
+	device->CreateShaderResourceView(*SRVToBlur, &srvDesc, SRVHeap.begin()->CPUHandle);
 
 	// UAV setup for output image
 	auto resDesc = CD3DX12_RESOURCE_DESC(
@@ -329,16 +327,15 @@ void CombinedBlurPass::InitResources(ID3D12Device5Ptr device)
 		IID_PPV_ARGS(&uavResource)));
 	BlurOutput = MakeShared<ID3D12ResourcePtr>(uavResource);
 
-	UAVHeap = D3D::CreateDescriptorHeap(device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
-	auto uavHandle = UAVHeap->GetCPUDescriptorHandleForHeapStart();
-	device->CreateShaderResourceView(*BlurOutput, &srvDesc, uavHandle);
+	UAVHeap.Create(device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
+	device->CreateShaderResourceView(*BlurOutput, &srvDesc, UAVHeap.begin()->CPUHandle);
 
 	InitStaticResources(device);
 
 	//----------------------------------------------
-	Heaps.PushBack(SRVHeap);
-	Heaps.PushBack(UAVHeap);
-	Heaps.PushBack(FiltersHeap);
+	Heaps.push_back(SRVHeap);
+	Heaps.push_back(UAVHeap);
+	Heaps.push_back(FiltersHeap);
 
 }
 
@@ -389,7 +386,7 @@ void CombinedBlurPass::InitStaticResources(ID3D12Device5Ptr device)
 	auto& cmdAllocator = Globals.CmdAllocator;
 
 	// Descriptor Heap for SRV
-	FiltersHeap = D3D::CreateDescriptorHeap(device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
+	FiltersHeap.Create(device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
 
 	constexpr uint32_t NumKernels = MaxRadius;
 
@@ -442,8 +439,7 @@ void CombinedBlurPass::InitStaticResources(ID3D12Device5Ptr device)
 	srvDesc.Buffer.StructureByteStride = sizeof(Kernel);
 	srvDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
 
-	auto filtersHandle = FiltersHeap->GetCPUDescriptorHandleForHeapStart();
-	device->CreateShaderResourceView(Filters, &srvDesc, filtersHandle);
+	device->CreateShaderResourceView(Filters, &srvDesc, FiltersHeap.begin()->CPUHandle);
 
 	// Synchronization Point - Important because I copy data to GPU above
 	Globals.FenceValue = D3D::SubmitCommandList(cmdList, Globals.CmdQueue, Globals.Fence, Globals.FenceValue);
@@ -461,7 +457,9 @@ CombinedBlurPassGlobal::CombinedBlurPassGlobal(std::string&& name, bool flag, ui
 void CombinedBlurPassGlobal::Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene & scene)
 {
 	cmdList->SetComputeRootSignature(RootSignatureData.RootSignaturePtr.Get());
-	Heaps.BindCompute(cmdList);
+	//Heaps.BindCompute(cmdList);
+	for (size_t i = 0; i < Heaps.size(); i++)
+		Heaps[i].BindCompute(cmdList, i);
 	FilterRadius.BindCompute(cmdList, 3);
 
 	UINT threadGroupX = (Globals.WindowDimensions.x + 127) / (GroupSize);  // Assuming 16x16 thread group size
@@ -479,8 +477,7 @@ void CombinedBlurPassGlobal::InitResources(ID3D12Device5Ptr device)
 {
 	CombinedBlurPass::InitResources(device);
 
-	CBVHeap = D3D::CreateDescriptorHeap(device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
-	auto cbvHandle = CBVHeap->GetCPUDescriptorHandleForHeapStart();
-	FilterRadius.Resource.Init(device, cbvHandle);
+	CBVHeap.Create(device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
+	FilterRadius.Resource.Init(device, CBVHeap.begin()->CPUHandle);
 	FilterRadius.Resource.Tick();
 }

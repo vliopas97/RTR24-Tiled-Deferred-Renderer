@@ -18,8 +18,6 @@ private:
 	SharedPtr<ID3D12ResourcePtr> Specular;
 
 	// GBuffers
-	SharedPtr<ID3D12DescriptorHeapPtr> RTVHeap{}; // to be used in this pass as RTVs
-	SharedPtr<ID3D12DescriptorHeapPtr> SRVHeap{}; // to be used in lighting pass as SRVs
-	SharedPtr<ID3D12DescriptorHeapPtr> SRVHeapRO{}; // read only alternative of SRVHeap - to be used for GUI displaying
-	std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 4> RTVHandles{};
+	DX::DescriptorHeap RTVHeap{}; // to be used in this pass as RTVs
+	SharedPtr<DX::DescriptorHeap> SRVHeap{}; // to be used in lighting pass as SRVs
 };

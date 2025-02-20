@@ -33,6 +33,7 @@ project "DeferredRenderer"
     includedirs
     {
         "%{prj.name}/src",
+        "%{prj.name}/src/Rendering",
         "%{wks.location}/ThirdParty/dxc",
         "%{wks.location}/ThirdParty/glm",
         "%{wks.location}/ThirdParty/core",

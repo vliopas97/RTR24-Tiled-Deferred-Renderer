@@ -19,11 +19,11 @@ void ForwardRenderPass::Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scen
 
 void ForwardRenderPass::InitResources(ID3D12Device5Ptr device)
 {
-	Heaps.PushBack(Globals.SRVHeap);
-	Heaps.PushBack(Globals.UAVHeap);
-	Heaps.PushBack(Globals.CBVHeap);
-	Heaps.PushBack(Globals.SamplerHeap);
-	Heaps.PushBack(Globals.LightsHeap);
+	Heaps.push_back(Globals.SRVHeap);
+	Heaps.push_back(Globals.UAVHeap);
+	Heaps.push_back(Globals.CBVHeap);
+	Heaps.push_back(Globals.SamplerHeap);
+	Heaps.push_back(Globals.LightsHeap);
 }
 
 void ForwardRenderPass::InitRootSignature()

@@ -18,10 +18,10 @@ private:
 	SharedPtr<ID3D12ResourcePtr> Specular;
 	SharedPtr<ID3D12ResourcePtr> AmbientOcclusion;
 
-	SharedPtr<ID3D12DescriptorHeapPtr> GBufferHeap{};
-	ID3D12DescriptorHeapPtr AOHeap;
+	SharedPtr<DX::DescriptorHeap> GBufferHeap{};
+	DX::DescriptorHeap AOHeap;
 
-	SharedPtr<ID3D12DescriptorHeapPtr> RTVHeap{};
+	DX::DescriptorHeap RTVHeap{};
 	D3D12_CPU_DESCRIPTOR_HANDLE RTVHandle{};
 };
 

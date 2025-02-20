@@ -3,6 +3,8 @@
 #include "Buffer.h"
 #include "Shaders/HLSLCompat.h"
 
+#include "DX12/dxDescriptorHeap.h"
+
 #include <type_traits>
 
 class RenderPass;
@@ -19,7 +21,7 @@ template <typename T>
 inline constexpr bool is_com_ptr_v<ComPtrWrapper<T>> = true;
 
 template <typename T>
-concept ResourceType = is_com_ptr_v<T>;
+concept ResourceType = is_com_ptr_v<T> || std::is_base_of_v<DX::DescriptorHeap, T>;
 
 template <typename T>
 concept HasGetGPUVirtualAddress =
@@ -42,11 +44,11 @@ using is_base_of_template = typename is_base_of_template_impl<base, derived>::ty
 
 struct GlobalResources
 {
-	ID3D12DescriptorHeapPtr SRVHeap{};
-	ID3D12DescriptorHeapPtr UAVHeap{};
-	ID3D12DescriptorHeapPtr CBVHeap{};
-	ID3D12DescriptorHeapPtr SamplerHeap{};
-	ID3D12DescriptorHeapPtr LightsHeap{};
+	DX::DescriptorHeap SRVHeap{};
+	DX::DescriptorHeap UAVHeap{};
+	DX::DescriptorHeap CBVHeap{};
+	DX::DescriptorHeap SamplerHeap{};
+	DX::DescriptorHeap LightsHeap{};
 	ConstantBuffer<PipelineConstants> CBGlobalConstants{};
 
 	ID3D12ResourcePtr RTVBuffer{};

@@ -14,5 +14,5 @@ private:
 	SharedPtr<ID3D12ResourcePtr> OriginalColor;
 	SharedPtr<ID3D12ResourcePtr> ReflectionColor;
 
-	ID3D12DescriptorHeapPtr SRVHeap;
+	DX::DescriptorHeap SRVHeap;
 };

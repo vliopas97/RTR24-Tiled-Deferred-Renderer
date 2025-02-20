@@ -1,5 +1,6 @@
 #pragma once
 #include "RenderPass.h"
+#include "Rendering/DX12/dxDescriptorHeap.h"
 
 class AmbientOcclusionPass final : public RenderPass
 {
@@ -16,8 +17,8 @@ private:
 	SharedPtr<ID3D12ResourcePtr> Normals;
 	SharedPtr<ID3D12ResourcePtr> Positions;
 
-	SharedPtr<ID3D12DescriptorHeapPtr> SRVHeap{};
-	SharedPtr<ID3D12DescriptorHeapPtr> RTVHeap{};
+	DX::DescriptorHeap SRVHeap{};
+	DX::DescriptorHeap RTVHeap{};
 	D3D12_CPU_DESCRIPTOR_HANDLE RTVHandle{};
 };
 

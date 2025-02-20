@@ -31,11 +31,12 @@ void ReflectionPass::Bind(ID3D12GraphicsCommandList4Ptr cmdList) const
 	// Set scissor rect
 	D3D12_RECT scissorRect = { 0, 0, Globals.WindowDimensions.x, Globals.WindowDimensions.y };
 	const float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	cmdList->ClearRenderTargetView(RTVHandle, clearColor, 0, nullptr);
+	cmdList->ClearRenderTargetView(RTVHeap.begin()->CPUHandle, clearColor, 0, nullptr);
+	cmdList->OMSetRenderTargets(1,&RTVHeap.begin()->CPUHandle, FALSE, nullptr);
 	cmdList->RSSetScissorRects(1, &scissorRect);
-	cmdList->OMSetRenderTargets(1, &RTVHandle, FALSE, nullptr);
 
-	Heaps.Bind(cmdList);
+	for (size_t i = 0; i < Heaps.size(); i++)
+		Heaps[i].Bind(cmdList, i);
 
 	cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	cmdList->DrawInstanced(3, 1, 0, 0);
@@ -43,8 +44,7 @@ void ReflectionPass::Bind(ID3D12GraphicsCommandList4Ptr cmdList) const
 
 void ReflectionPass::InitResources(ID3D12Device5Ptr device)
 {
-	SRVHeap = D3D::CreateDescriptorHeap(device, 3, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
-	auto srvHandle = SRVHeap->GetCPUDescriptorHandleForHeapStart();
+	SRVHeap.Create(device, 3, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
 	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -54,18 +54,14 @@ void ReflectionPass::InitResources(ID3D12Device5Ptr device)
 	srvDesc.Texture2D.MostDetailedMip = 0;
 	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
 
-	device->CreateShaderResourceView(*Positions, &srvDesc, srvHandle);
-	srvHandle.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
-	device->CreateShaderResourceView(*Normals, &srvDesc, srvHandle);
-	srvHandle.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	device->CreateShaderResourceView(*Positions, &srvDesc, SRVHeap[0].CPUHandle);
+	device->CreateShaderResourceView(*Normals, &srvDesc, SRVHeap[1].CPUHandle);
 
 	srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-	device->CreateShaderResourceView(*PixelsColor, &srvDesc, srvHandle);
+	device->CreateShaderResourceView(*PixelsColor, &srvDesc, SRVHeap[2].CPUHandle);
 
 	// Render target creation
-	RTVHeap = D3D::CreateDescriptorHeap(device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, false);
-	RTVHandle = RTVHeap->GetCPUDescriptorHandleForHeapStart();
+	RTVHeap.Create(device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, false);
 
 	// Create Render Target
 	D3D12_CLEAR_VALUE clearValue = {};
@@ -93,11 +89,11 @@ void ReflectionPass::InitResources(ID3D12Device5Ptr device)
 		IID_PPV_ARGS(&renderTarget)));
 	RTVBuffer = MakeShared<ID3D12ResourcePtr>(renderTarget);
 
-	device->CreateRenderTargetView(*RTVBuffer, nullptr, RTVHandle);
+	device->CreateRenderTargetView(*RTVBuffer, nullptr, RTVHeap.begin()->CPUHandle);
 
-	Heaps.PushBack(SRVHeap);
-	Heaps.PushBack(Globals.SamplerHeap);
-	Heaps.PushBack(Globals.CBVHeap);
+	Heaps.push_back(SRVHeap);
+	Heaps.push_back(Globals.SamplerHeap);
+	Heaps.push_back(Globals.CBVHeap);
 }
 
 void ReflectionPass::InitRootSignature()

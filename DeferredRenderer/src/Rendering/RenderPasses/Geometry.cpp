@@ -15,8 +15,7 @@ GeometryPass::GeometryPass(std::string&& name) :
 	Register<PassOutput<ID3D12ResourcePtr>>("normals", Normals, D3D12_RESOURCE_STATE_RENDER_TARGET);
 	Register<PassOutput<ID3D12ResourcePtr>>("diffuse", Diffuse, D3D12_RESOURCE_STATE_RENDER_TARGET);
 	Register<PassOutput<ID3D12ResourcePtr>>("specular", Specular, D3D12_RESOURCE_STATE_RENDER_TARGET);
-	Register<PassOutput<ID3D12DescriptorHeapPtr>>("srvHeap", SRVHeap);
-	Register<PassOutput<ID3D12DescriptorHeapPtr>>("srvHeapRO", SRVHeapRO);
+	Register<PassOutput<DX::DescriptorHeap>>("srvHeap", SRVHeap);
 }
 
 void GeometryPass::Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene)
@@ -30,14 +29,20 @@ void GeometryPass::Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& sc
 	// Set scissor rect
 	D3D12_RECT scissorRect = { 0, 0, Globals.WindowDimensions.x, Globals.WindowDimensions.y };
 	cmdList->RSSetScissorRects(1, &scissorRect);
-	cmdList->OMSetRenderTargets(4, RTVHandles.data(), FALSE, &Globals.DSVHandle);
+
+	std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 4> rtvHandles;
+	for (size_t i = 0; i < RTVHeap.GetNumDescriptors(); i++)
+		rtvHandles[i] = RTVHeap[i].CPUHandle;
+	cmdList->OMSetRenderTargets(rtvHandles.size(), rtvHandles.data(), FALSE, &Globals.DSVHandle);
 
 	const float clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-	for (auto handle : RTVHandles)
-		cmdList->ClearRenderTargetView(handle, clearColor, 0, nullptr);
+	for (auto handle : RTVHeap)
+		cmdList->ClearRenderTargetView(handle.CPUHandle, clearColor, 0, nullptr);
 	cmdList->ClearDepthStencilView(Globals.DSVHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0.0f, 0, nullptr);
 
-	Heaps.Bind(cmdList);
+	for (size_t i = 0; i < Heaps.size(); i++)
+		Heaps[i].Bind(cmdList, i);
+
 	scene.Bind<GeometryPass>(cmdList);
 }
 
@@ -101,33 +106,16 @@ void GeometryPass::InitResources(ID3D12Device5Ptr device)
 		IID_PPV_ARGS(&specular)));
 	Specular = MakeShared<ID3D12ResourcePtr>(specular);
 
-	auto rtvHeap = D3D::CreateDescriptorHeap(device, 4, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, false);
-	RTVHeap = MakeShared<ID3D12DescriptorHeapPtr>(rtvHeap);
+	RTVHeap.Create(device, 4, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, false);
 
-	auto srvHeap = D3D::CreateDescriptorHeap(device, 4, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
-	SRVHeap = MakeShared<ID3D12DescriptorHeapPtr>(srvHeap);
-
-	auto srvHeapRO = D3D::CreateDescriptorHeap(device, 4, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, false);
-	SRVHeapRO = MakeShared<ID3D12DescriptorHeapPtr>(srvHeapRO);
-
-	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = RTVHeap->Get()->GetCPUDescriptorHandleForHeapStart();
-	UINT rtvDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	SRVHeap = MakeShared<DX::DescriptorHeap>();
+	SRVHeap->Create(device, 4, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
 
 	// Creating Render Target Views
-	RTVHandles[0] = rtvHandle;
-	device->CreateRenderTargetView(*Positions, nullptr, rtvHandle);
-	rtvHandle.ptr += rtvDescriptorSize;
-
-	RTVHandles[1] = rtvHandle;
-	device->CreateRenderTargetView(*Normals, nullptr, rtvHandle);
-	rtvHandle.ptr += rtvDescriptorSize;
-
-	RTVHandles[2] = rtvHandle;
-	device->CreateRenderTargetView(*Diffuse, nullptr, rtvHandle);
-	rtvHandle.ptr += rtvDescriptorSize;
-
-	RTVHandles[3] = rtvHandle;
-	device->CreateRenderTargetView(*Specular, nullptr, rtvHandle);
+	device->CreateRenderTargetView(*Positions, nullptr, RTVHeap[0].CPUHandle);
+	device->CreateRenderTargetView(*Normals, nullptr, RTVHeap[1].CPUHandle);
+	device->CreateRenderTargetView(*Diffuse, nullptr, RTVHeap[2].CPUHandle);
+	device->CreateRenderTargetView(*Specular, nullptr, RTVHeap[3].CPUHandle);
 
 	// Creating Shader Visible Views to be used in subsequent Lighting Pass
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
@@ -138,29 +126,17 @@ void GeometryPass::InitResources(ID3D12Device5Ptr device)
 	srvDesc.Texture2D.MostDetailedMip = 0;
 	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
 
-	D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = SRVHeapRO->Get()->GetCPUDescriptorHandleForHeapStart();
-	UINT srvDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
-	device->CreateShaderResourceView(*Positions, &srvDesc, srvHandle);
-	srvHandle.ptr += srvDescriptorSize;
-
-	device->CreateShaderResourceView(*Normals, &srvDesc, srvHandle);
-	srvHandle.ptr += srvDescriptorSize;
+	auto& srvHeap = *SRVHeap;
+	device->CreateShaderResourceView(*Positions, &srvDesc, srvHeap[0].CPUHandle);
+	device->CreateShaderResourceView(*Normals, &srvDesc, srvHeap[1].CPUHandle);
 
 	srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-	device->CreateShaderResourceView(*Diffuse, &srvDesc, srvHandle);
-	srvHandle.ptr += srvDescriptorSize;
+	device->CreateShaderResourceView(*Diffuse, &srvDesc, srvHeap[2].CPUHandle);
+	device->CreateShaderResourceView(*Specular, &srvDesc, srvHeap[3].CPUHandle);
 
-	device->CreateShaderResourceView(*Specular, &srvDesc, srvHandle);
-	srvHandle.ptr += srvDescriptorSize;
-
-	device->CopyDescriptorsSimple(4, (*SRVHeap)->GetCPUDescriptorHandleForHeapStart(),
-								  (*SRVHeapRO)->GetCPUDescriptorHandleForHeapStart(),
-								  D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
-	Heaps.PushBack(Globals.SRVHeap);
-	Heaps.PushBack(Globals.CBVHeap);
-	Heaps.PushBack(Globals.SamplerHeap);
+	Heaps.push_back(Globals.SRVHeap);
+	Heaps.push_back(Globals.CBVHeap);
+	Heaps.push_back(Globals.SamplerHeap);
 }
 
 void GeometryPass::InitRootSignature()

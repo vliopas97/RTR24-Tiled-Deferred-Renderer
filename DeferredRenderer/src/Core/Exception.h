@@ -137,7 +137,7 @@ private:
 
 //#ifndef NDEBUG
 #define ASSERT(condition, msg)\
-if(!condition) throw EXCEPTION(msg);
+if(!(condition)) throw EXCEPTION(msg);
 
 #define GRAPHICS_ASSERT(hrcall)\
 {	DXGIInfoManager InfoManager;\

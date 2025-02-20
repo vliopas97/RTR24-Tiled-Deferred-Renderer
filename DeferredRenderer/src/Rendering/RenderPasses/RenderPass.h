@@ -5,6 +5,8 @@
 #include "Rendering/RootSignature.h"
 #include "Rendering/Resources.h"
 
+#include "DX12/dxDescriptorHeap.h"
+
 #include <optional>
 
 class PassOutputBase;
@@ -49,7 +51,8 @@ public:
 		:PassInputBase(std::move(name), state), Resource(resource)
 	{}
 
-	PassInput(std::string&& name, SharedPtr<T>& resource) requires (std::is_base_of_v<ID3D12DescriptorHeapPtr, T>)
+	PassInput(std::string&& name, SharedPtr<T>& resource) requires (std::is_base_of_v<ID3D12DescriptorHeapPtr, T> ||
+																	std::is_base_of_v<DX::DescriptorHeap, T>)
 		: PassInputBase(std::move(name), (D3D12_RESOURCE_STATES)0), Resource(resource)
 	{}
 
@@ -88,7 +91,7 @@ private:
 	template <typename U = T>
 	std::optional<UniquePtr<TransitionBase>> GetResourceTransitionImpl(D3D12_RESOURCE_STATES prev) const
 	{
-		if constexpr (std::is_base_of_v<ID3D12DescriptorHeapPtr, U>)
+		if constexpr (std::is_base_of_v<ID3D12DescriptorHeapPtr, U> || std::is_base_of_v<DX::DescriptorHeap, T>)
 			return std::nullopt;
 		else
 			return MakeUnique<Transition<U>>(Resource, prev, State);
@@ -97,7 +100,7 @@ private:
 	template <typename U = T>
 	std::optional<UniquePtr<TransitionBase>> BuildTransitionImpl(D3D12_RESOURCE_STATES prev, D3D12_RESOURCE_STATES next) const
 	{
-		if constexpr (std::is_base_of_v<ID3D12DescriptorHeapPtr, U>)
+		if constexpr (std::is_base_of_v<ID3D12DescriptorHeapPtr, U> || std::is_base_of_v<DX::DescriptorHeap, T>)
 			return std::nullopt;
 		else
 			return MakeUnique<Transition<U>>(Resource, prev, next);
@@ -136,7 +139,8 @@ public:
 		:PassOutputBase(std::move(name), state), Resource(resource)
 	{}
 
-	PassOutput(std::string&& name, SharedPtr<T>& resource) requires(std::is_base_of_v<ID3D12DescriptorHeapPtr, T>)
+	PassOutput(std::string&& name, SharedPtr<T>& resource) requires(std::is_base_of_v<ID3D12DescriptorHeapPtr, T> ||
+																	std::is_base_of_v<DX::DescriptorHeap, T>)
 		: PassOutputBase(std::move(name), (D3D12_RESOURCE_STATES)0), Resource(resource)
 	{}
 
@@ -208,7 +212,7 @@ protected:
 
 	ID3D12PipelineStatePtr PipelineState;
 	RootSignature RootSignatureData;
-	DescriptorHeapComposite Heaps;
+	std::vector<DX::DescriptorHeap> Heaps;
 
 	SharedPtr<ID3D12ResourcePtr> RTVBuffer{};
 	SharedPtr<ID3D12ResourcePtr> DSVBuffer{};

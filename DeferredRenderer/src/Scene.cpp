@@ -31,22 +31,20 @@ void Scene::Tick()
 
 void Scene::CreateShaderResources(ID3D12Device5Ptr device, ID3D12CommandQueuePtr cmdQueue)
 {
-	auto uavHandle = Globals.UAVHeap->GetCPUDescriptorHandleForHeapStart();
-	auto srvHandle = Globals.SRVHeap->GetCPUDescriptorHandleForHeapStart();
-	auto cbvHandle = Globals.CBVHeap->GetCPUDescriptorHandleForHeapStart();
-	auto lightsHandle = Globals.LightsHeap->GetCPUDescriptorHandleForHeapStart();
+	auto uavHeapIt = Globals.UAVHeap.begin();
+	auto srvHeapIt = Globals.SRVHeap.begin();
+	auto cbvHeapIt = Globals.CBVHeap.begin();
+	auto lightsHeapIt = Globals.LightsHeap.begin();
 
-	cbvHandle.ptr += Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV); // 1st element of desc table occupied
 	for (auto& actor : Actors)
 	{
-		actor.SetUpGPUResources(Device, cbvHandle);
-		cbvHandle.ptr += Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		actor.SetUpGPUResources(Device, (++cbvHeapIt)->CPUHandle);
 	}
 
 	for (auto& light : Lights)
 	{
-		light.SetUpGPUResources(device, lightsHandle);
-		lightsHandle.ptr += Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		light.SetUpGPUResources(device, lightsHeapIt->CPUHandle);
+		lightsHeapIt++;
 	}
 
 	InitializeTextures(device, cmdQueue);
@@ -63,7 +61,7 @@ void Scene::CreateShaderResources(ID3D12Device5Ptr device, ID3D12CommandQueuePtr
 	samplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
 
 	// Get the handle to the sampler heap
-	CD3DX12_CPU_DESCRIPTOR_HANDLE samplerHandle(Globals.SamplerHeap->GetCPUDescriptorHandleForHeapStart());
+	CD3DX12_CPU_DESCRIPTOR_HANDLE samplerHandle(Globals.SamplerHeap.begin()->CPUHandle);
 	device->CreateSampler(&samplerDesc, samplerHandle);
 
 }
@@ -71,12 +69,12 @@ void Scene::CreateShaderResources(ID3D12Device5Ptr device, ID3D12CommandQueuePtr
 void Scene::InitializeTextures(ID3D12Device5Ptr device, ID3D12CommandQueuePtr cmdQueue)
 {
 	// Create Texture
-	auto srvHandle = Globals.SRVHeap->GetCPUDescriptorHandleForHeapStart();
+	auto srvHeapIt = Globals.SRVHeap.begin();
 
 	for (const auto& pair : TextureIndexMap)
 	{
-		TextureResources.emplace_back(MakeUnique<Texture>(device, cmdQueue, srvHandle, FilesLocation + pair.first));
-		srvHandle.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		TextureResources.emplace_back(MakeUnique<Texture>(device, cmdQueue, srvHeapIt->CPUHandle, FilesLocation + pair.first));
+		srvHeapIt++;
 	}
 }
 

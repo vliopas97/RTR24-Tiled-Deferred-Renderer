@@ -122,17 +122,17 @@ void Graphics::Init()
 
 void Graphics::InitGlobals()
 {
-	SRVHeap = D3D::CreateDescriptorHeap(Device, 100, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
-	UAVHeap = D3D::CreateDescriptorHeap(Device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
-	CBVHeap = D3D::CreateDescriptorHeap(Device, 400, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
-	SamplerHeap = D3D::CreateDescriptorHeap(Device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, true);
-	LightsHeap = D3D::CreateDescriptorHeap(Device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
+	SRVHeap.Create(Device, 100, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
+	UAVHeap.Create(Device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
+	CBVHeap.Create(Device, 400, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
+	SamplerHeap.Create(Device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, true);
+	LightsHeap.Create(Device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
 
 	GlobalResManager::SetRTV(FrameObjects[0].SwapChainBuffer, FrameObjects[0].RTVHandle);
 	GlobalResManager::SetDSV(FrameObjects[0].DepthStencilBuffer, FrameObjects[0].DSVHandle);
 	GlobalResManager::SetCmdAllocator(FrameObjects[0].CmdAllocator);
 
-	CBGlobalConstants.Init(Device, CBVHeap->GetCPUDescriptorHandleForHeapStart());
+	CBGlobalConstants.Init(Device, CBVHeap.begin()->CPUHandle);
 }
 
 void Graphics::InitScene()

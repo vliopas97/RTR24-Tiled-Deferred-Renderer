@@ -24,10 +24,11 @@ void AmbientOcclusionPass::Submit(ID3D12GraphicsCommandList4Ptr cmdList, const S
 	cmdList->RSSetScissorRects(1, &scissorRect);
 
 	const float clearColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-	cmdList->ClearRenderTargetView(RTVHandle, clearColor, 0, nullptr);
-	cmdList->OMSetRenderTargets(1, &RTVHandle, FALSE, nullptr); // NEED CUSTOM RTV!
+	cmdList->ClearRenderTargetView(RTVHeap[0].CPUHandle, clearColor, 0, nullptr);
+	cmdList->OMSetRenderTargets(1, &RTVHeap[0].CPUHandle, FALSE, nullptr); // NEED CUSTOM RTV!
 
-	Heaps.Bind(cmdList);
+	for (size_t i = 0; i < Heaps.size(); i++)
+		Heaps[i].Bind(cmdList, i);
 
 	cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	cmdList->DrawInstanced(3, 1, 0, 0);
@@ -181,11 +182,9 @@ void AmbientOcclusionPass::InitResources(ID3D12Device5Ptr device)
 	RTVBuffer = MakeShared<ID3D12ResourcePtr>(renderTarget);
 
 	// RTV Heap
-	auto rtvHeap = D3D::CreateDescriptorHeap(device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, false);
-	RTVHeap = MakeShared<ID3D12DescriptorHeapPtr>(rtvHeap);
+	RTVHeap.Create(device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, false);
 
-	RTVHandle = rtvHeap->GetCPUDescriptorHandleForHeapStart();
-	device->CreateRenderTargetView(*RTVBuffer, nullptr, RTVHandle);
+	device->CreateRenderTargetView(*RTVBuffer, nullptr, RTVHeap[0].CPUHandle);
 
 	// SRV Heap
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
@@ -196,22 +195,15 @@ void AmbientOcclusionPass::InitResources(ID3D12Device5Ptr device)
 	srvDesc.Texture2D.MostDetailedMip = 0;
 	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
 
-	auto srvHeap = D3D::CreateDescriptorHeap(device, 4, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
-	SRVHeap = MakeShared<ID3D12DescriptorHeapPtr>(srvHeap);
-
-	D3D12_CPU_DESCRIPTOR_HANDLE srvHandle = (*SRVHeap)->GetCPUDescriptorHandleForHeapStart();
-	UINT srvDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
-	device->CreateShaderResourceView(*Positions, &srvDesc, srvHandle);
-	srvHandle.ptr += srvDescriptorSize;
+	SRVHeap.Create(device, 4, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
+	auto it = SRVHeap.begin();
+	device->CreateShaderResourceView(*Positions, &srvDesc, it++->CPUHandle);
 
 	srvDesc.Format = DXGI_FORMAT_R32G32B32_FLOAT;
-	device->CreateShaderResourceView(*RandomTexture, &srvDesc, srvHandle);
-	srvHandle.ptr += srvDescriptorSize;
+	device->CreateShaderResourceView(*RandomTexture, &srvDesc, it++->CPUHandle);
 
 	srvDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-	device->CreateShaderResourceView(*Normals, &srvDesc, srvHandle);
-	srvHandle.ptr += srvDescriptorSize;
+	device->CreateShaderResourceView(*Normals, &srvDesc, it++->CPUHandle);
 
 	srvDesc.Format = DXGI_FORMAT_UNKNOWN; // Structured buffers have no specific format
 	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
@@ -220,12 +212,12 @@ void AmbientOcclusionPass::InitResources(ID3D12Device5Ptr device)
 	srvDesc.Buffer.NumElements = ssaoKernelVals.size(); // Number of elements in the buffer
 	srvDesc.Buffer.StructureByteStride = sizeof(glm::float3); // Size of each element
 	srvDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
-	device->CreateShaderResourceView(*SSAOKernel, &srvDesc, srvHandle);
+	device->CreateShaderResourceView(*SSAOKernel, &srvDesc, it->CPUHandle);
 
 	// Set up heaps to bind
-	Heaps.PushBack(*SRVHeap);
-	Heaps.PushBack(Globals.SamplerHeap);
-	Heaps.PushBack(Globals.CBVHeap);
+	Heaps.push_back(SRVHeap);
+	Heaps.push_back(Globals.SamplerHeap);
+	Heaps.push_back(Globals.CBVHeap);
 
 	// Synchronization Point - Important because I copy data to GPU above
 	Globals.FenceValue = D3D::SubmitCommandList(cmdList, Globals.CmdQueue, Globals.Fence, Globals.FenceValue);

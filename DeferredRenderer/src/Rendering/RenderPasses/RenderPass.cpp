@@ -66,7 +66,9 @@ void RenderPass::Bind(ID3D12GraphicsCommandList4Ptr cmdList) const
 	cmdList->RSSetScissorRects(1, &scissorRect);
 	cmdList->OMSetRenderTargets(1, &Globals.RTVHandle, FALSE, &Globals.DSVHandle);
 
-	Heaps.Bind(cmdList);
+	//Heaps.Bind(cmdList);
+	for (size_t i = 0; i < Heaps.size(); i++)
+		Heaps[i].Bind(cmdList, i);
 }
 
 void RenderPass::InitResources(ID3D12Device5Ptr device) 
