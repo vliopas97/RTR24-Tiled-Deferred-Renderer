@@ -1,8 +1,8 @@
 #define HLSL
 #include "..\HLSLCompat.h"
 
-Texture2D<float4> OriginalColor;
-Texture2D<float4> ReflectionColor;
+Texture2D<float4> OriginalColor : register(t0);
+Texture2D<float4> ReflectionColor : register(t1);
 
 SamplerState smplr : register(s0);
 
@@ -22,7 +22,7 @@ float4 main(float4 position : SV_Position) : SV_TARGET
     
     if(!globalConstants.SSREnabled)
         return orgColor;
-
+    
     float3 color = lerp(orgColor.rgb, reflColor.rgb, reflColor.a);
     return float4(color, 1.0f);
 

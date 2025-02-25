@@ -4,11 +4,11 @@
 AmbientOcclusionPass::AmbientOcclusionPass(std::string&& name)
 	:RenderPass(std::move(name))
 {
-	Register<PassInput<ID3D12ResourcePtr>>("positions", Positions, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	Register<PassInput<ID3D12ResourcePtr>>("normals", Normals, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	Register<PassOutput<ID3D12ResourcePtr>>("positions", Positions, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	Register<PassOutput<ID3D12ResourcePtr>>("normals", Normals, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	Register<PassOutput<ID3D12ResourcePtr>>("renderTarget", RTVBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	Register<PassInput<DX::Texture>>("positions", Positions);
+	Register<PassInput<DX::Texture>>("normals", Normals);
+	Register<PassOutput<DX::Texture>>("positions", Positions);
+	Register<PassOutput<DX::Texture>>("normals", Normals);
+	Register<PassOutput<DX::Texture>>("renderTarget", RTVBuffer);
 }
 
 void AmbientOcclusionPass::Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene)
@@ -34,6 +34,17 @@ void AmbientOcclusionPass::Submit(ID3D12GraphicsCommandList4Ptr cmdList, const S
 	cmdList->DrawInstanced(3, 1, 0, 0);
 }
 
+void AmbientOcclusionPass::PreExecTransitions(ID3D12GraphicsCommandList4Ptr cmdList)
+{
+	Positions->TransitionTo(cmdList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	Normals->TransitionTo(cmdList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+}
+
+void AmbientOcclusionPass::PostExecTransitions(ID3D12GraphicsCommandList4Ptr cmdList)
+{
+	RTVBuffer->TransitionTo(cmdList, D3D12_RESOURCE_STATE_RENDER_TARGET);
+}
+
 void AmbientOcclusionPass::InitResources(ID3D12Device5Ptr device)
 {
 	auto& cmdList = Globals.CmdList;
@@ -54,40 +65,19 @@ void AmbientOcclusionPass::InitResources(ID3D12Device5Ptr device)
 		noiseTextureFloats[i].z = 0.0f;
 	}
 
-	// Create Random Texture
-	auto resDesc = CD3DX12_RESOURCE_DESC(
-		D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-		D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT,
-		8, 8, 1, 1,
-		DXGI_FORMAT_R32G32B32_FLOAT,
-		1, 0,
-		D3D12_TEXTURE_LAYOUT_UNKNOWN, D3D12_RESOURCE_FLAG_NONE);
+	DX::TextureCreateInfo texDesc;
+	texDesc.device = device;
+	texDesc.width = 8;  // 8x8 texture
+	texDesc.height = 8;
+	texDesc.depth = 1;
+	texDesc.format = DXGI_FORMAT_R32G32B32_FLOAT;  // Match original format
+	texDesc.resDim = RESOURCE_DIMENSION::RESOURCE_DIMENSION_TEXTURE2D;
+	texDesc.viewDim = VIEW_DIMENSION::VIEW_DIMENSION_TEXTURE2D;
+	texDesc.initialResourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
 
-	ID3D12ResourcePtr randomTexture;
-	GRAPHICS_ASSERT(device->CreateCommittedResource(
-		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-		D3D12_HEAP_FLAG_NONE,
-		&resDesc,
-		D3D12_RESOURCE_STATE_COPY_DEST,
-		nullptr,
-		IID_PPV_ARGS(&randomTexture)));
-	RandomTexture = MakeShared<ID3D12ResourcePtr>(randomTexture);
+	RandomTexture = MakeShared<DX::Texture>(&texDesc);
+	RandomTexture->Upload(noiseTextureFloats.data(), texDesc.width * sizeof(glm::float3), texDesc.height * texDesc.width * sizeof(glm::float3));
 
-	ID3D12ResourcePtr stagingBufferRandTex;
-	GRAPHICS_ASSERT(device->CreateCommittedResource(
-		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-		D3D12_HEAP_FLAG_NONE,
-		&CD3DX12_RESOURCE_DESC::Buffer(GetRequiredIntermediateSize(*RandomTexture, 0, 1)),
-		D3D12_RESOURCE_STATE_GENERIC_READ,
-		nullptr,
-		IID_PPV_ARGS(&stagingBufferRandTex)));
-	D3D12_SUBRESOURCE_DATA textureData{};
-	textureData.pData = noiseTextureFloats.data();
-	textureData.RowPitch = resDesc.Width * sizeof(glm::float3);
-	textureData.SlicePitch = textureData.RowPitch * resDesc.Height;
-
-	UpdateSubresources(cmdList, *RandomTexture, stagingBufferRandTex, 0, 0, 1, &textureData);
-	cmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(*RandomTexture, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
 	// Done Creating Random Texture
 
 	// Create SSAO Kernel
@@ -107,6 +97,7 @@ void AmbientOcclusionPass::InitResources(ID3D12Device5Ptr device)
 		ssaoKernelVals[i].z *= scaleMul;
 	}
 
+	D3D12_RESOURCE_DESC resDesc{};
 	resDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
 	resDesc.Alignment = 0;
 	resDesc.Width = sizeof(glm::float3) * ssaoKernelVals.size(); // Total buffer size
@@ -155,55 +146,30 @@ void AmbientOcclusionPass::InitResources(ID3D12Device5Ptr device)
 	SSAOKernel = MakeShared<ID3D12ResourcePtr>(gpuBuffer);
 	// Done Creating SSAO Kernel
 
-	// Create Render Target
-	D3D12_CLEAR_VALUE clearValue = {};
-	clearValue.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	clearValue.Color[0] = 1.0f;
-	clearValue.Color[1] = 1.0f;
-	clearValue.Color[2] = 1.0f;
-	clearValue.Color[3] = 1.0f;
+	texDesc.clearValue = {.Format = DXGI_FORMAT_R8G8B8A8_UNORM, .Color = {1.0f, 1.0f, 1.0f, 1.0f} };
+	texDesc.format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	texDesc.initialResourceState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+	texDesc.flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+	texDesc.width = Globals.WindowDimensions.x;
+	texDesc.height = Globals.WindowDimensions.y;
 
-	resDesc = CD3DX12_RESOURCE_DESC(
-		D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-		D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT,
-		Globals.WindowDimensions.x, Globals.WindowDimensions.y, 1, 1,
-		DXGI_FORMAT_R8G8B8A8_UNORM,
-		1, 0,
-		D3D12_TEXTURE_LAYOUT_UNKNOWN, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
-
-	ID3D12ResourcePtr renderTarget;
-	GRAPHICS_ASSERT(device->CreateCommittedResource(
-		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-		D3D12_HEAP_FLAG_NONE,
-		&resDesc,
-		D3D12_RESOURCE_STATE_RENDER_TARGET,
-		&clearValue,
-		IID_PPV_ARGS(&renderTarget)));
-	RTVBuffer = MakeShared<ID3D12ResourcePtr>(renderTarget);
+	RTVBuffer = MakeShared<DX::Texture>(&texDesc);
 
 	// RTV Heap
 	RTVHeap.Create(device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, false);
-
-	device->CreateRenderTargetView(*RTVBuffer, nullptr, RTVHeap[0].CPUHandle);
-
-	// SRV Heap
-	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	srvDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-	srvDesc.Texture2D.MipLevels = 1;
-	srvDesc.Texture2D.MostDetailedMip = 0;
-	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+	device->CreateRenderTargetView(RTVBuffer->Resource.Get(), nullptr, RTVHeap[0].CPUHandle);
 
 	SRVHeap.Create(device, 4, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
 	auto it = SRVHeap.begin();
-	device->CreateShaderResourceView(*Positions, &srvDesc, it++->CPUHandle);
 
-	srvDesc.Format = DXGI_FORMAT_R32G32B32_FLOAT;
-	device->CreateShaderResourceView(*RandomTexture, &srvDesc, it++->CPUHandle);
+	auto srvDesc = Positions->GetSRVDesc();
+	device->CreateShaderResourceView(Positions->Resource.Get(), &srvDesc, it++->CPUHandle);
 
-	srvDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-	device->CreateShaderResourceView(*Normals, &srvDesc, it++->CPUHandle);
+	srvDesc = RandomTexture->GetSRVDesc();
+	device->CreateShaderResourceView(RandomTexture->Resource.Get(), &srvDesc, it++->CPUHandle);
+
+	srvDesc = Normals->GetSRVDesc();
+	device->CreateShaderResourceView(Normals->Resource.Get(), &srvDesc, it++->CPUHandle);
 
 	srvDesc.Format = DXGI_FORMAT_UNKNOWN; // Structured buffers have no specific format
 	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;

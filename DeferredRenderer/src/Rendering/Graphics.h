@@ -55,8 +55,8 @@ private:
     {
         ID3D12CommandAllocatorPtr CmdAllocator;
         
-        ID3D12ResourcePtr SwapChainBuffer;
-        ID3D12ResourcePtr DepthStencilBuffer;
+        DX::Texture SwapChainBuffer;
+        DX::Texture DepthStencilBuffer;
 
         D3D12_CPU_DESCRIPTOR_HANDLE RTVHandle;
         D3D12_CPU_DESCRIPTOR_HANDLE DSVHandle;

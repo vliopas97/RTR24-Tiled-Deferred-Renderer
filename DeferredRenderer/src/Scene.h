@@ -5,6 +5,7 @@
 #include "Rendering/Shader.h"
 #include "Rendering/Texture.h"
 #include "Rendering/RootSignature.h"
+#include "DX12/dxTexture.h"
 
 
 class Scene
@@ -35,7 +36,7 @@ private:
 	ID3D12Device5Ptr Device;
 
 	std::vector<std::pair<std::string, uint32_t>> TextureIndexMap;
-	std::vector<UniquePtr<Texture>> TextureResources;
+	std::vector<UniquePtr<DX::Texture>> TextureResources;
 	
 	bool DebugMode;
 	std::string FilesLocation;

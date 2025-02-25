@@ -4,17 +4,19 @@
 GUIPass::GUIPass(std::string&& name)
 	:RenderPass(std::move(name))
 {
-	Register<PassInput<ID3D12ResourcePtr>>("positions", Positions, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	Register<PassInput<ID3D12ResourcePtr>>("normals", Normals, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	Register<PassInput<ID3D12ResourcePtr>>("diffuse", Diffuse, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	Register<PassInput<ID3D12ResourcePtr>>("specular", Specular, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	Register<PassInput<ID3D12ResourcePtr>>("ambientOcclusion", AmbientOcclusion, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	Register<PassInput<DX::Texture>>("positions", Positions);
+	Register<PassInput<DX::Texture>>("normals", Normals);
+	Register<PassInput<DX::Texture>>("diffuse", Diffuse);
+	Register<PassInput<DX::Texture>>("specular", Specular);
+	Register<PassInput<DX::Texture>>("ambientOcclusion", AmbientOcclusion);
+	Register<PassInput<DX::Texture>>("renderTarget", RTVBuffer);
 
-	Register<PassOutput<ID3D12ResourcePtr>>("positions", Positions, D3D12_RESOURCE_STATE_RENDER_TARGET);
-	Register<PassOutput<ID3D12ResourcePtr>>("normals", Normals, D3D12_RESOURCE_STATE_RENDER_TARGET);
-	Register<PassOutput<ID3D12ResourcePtr>>("diffuse", Diffuse, D3D12_RESOURCE_STATE_RENDER_TARGET);
-	Register<PassOutput<ID3D12ResourcePtr>>("specular", Specular, D3D12_RESOURCE_STATE_RENDER_TARGET);
-	Register<PassOutput<ID3D12ResourcePtr>>("ambientOcclusion", AmbientOcclusion, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	Register<PassOutput<DX::Texture>>("positions", Positions);
+	Register<PassOutput<DX::Texture>>("normals", Normals);
+	Register<PassOutput<DX::Texture>>("diffuse", Diffuse);
+	Register<PassOutput<DX::Texture>>("specular", Specular);
+	Register<PassOutput<DX::Texture>>("ambientOcclusion", AmbientOcclusion);
+	Register<PassOutput<DX::Texture>>("renderTarget", RTVBuffer);
 }
 
 GUIPass::~GUIPass()
@@ -33,42 +35,53 @@ void GUIPass::Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene)
 	Layer->End(cmdList);
 }
 
+void GUIPass::PreExecTransitions(ID3D12GraphicsCommandList4Ptr cmdList)
+{
+	Positions->TransitionTo(cmdList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	Normals->TransitionTo(cmdList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	Diffuse->TransitionTo(cmdList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	Specular->TransitionTo(cmdList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	AmbientOcclusion->TransitionTo(cmdList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+}
+
+void GUIPass::PostExecTransitions(ID3D12GraphicsCommandList4Ptr cmdList)
+{
+	Positions->TransitionTo(cmdList, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	Normals->TransitionTo(cmdList, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	Diffuse->TransitionTo(cmdList, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	Specular->TransitionTo(cmdList, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	AmbientOcclusion->TransitionTo(cmdList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	RTVBuffer->TransitionTo(cmdList, D3D12_RESOURCE_STATE_PRESENT);
+}
+
 void GUIPass::InitResources(ID3D12Device5Ptr device)
 {
-	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-	srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(0, 1, 2, 5);
-	srvDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-	srvDesc.Texture2D.MipLevels = 1;
-	srvDesc.Texture2D.MostDetailedMip = 0;
-	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
-
 	SRVHeap = D3D::CreateDescriptorHeap(device, 5, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, false);
 	auto srvHandle = SRVHeap->GetCPUDescriptorHandleForHeapStart();
 
-	auto desc = (*Positions)->GetDesc();
-	srvDesc.Format = desc.Format;
-	device->CreateShaderResourceView(*Positions, &srvDesc, srvHandle);
+	auto srvDesc = Positions->GetSRVDesc();
+	srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(0, 1, 2, 5);
+	device->CreateShaderResourceView(Positions->Resource.Get(), &srvDesc, srvHandle);
 	srvHandle.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-	desc = (*Normals)->GetDesc();
-	srvDesc.Format = desc.Format;
-	device->CreateShaderResourceView(*Normals, &srvDesc, srvHandle);
+	srvDesc = Normals->GetSRVDesc();
+	srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(0, 1, 2, 5);
+	device->CreateShaderResourceView(Normals->Resource.Get(), &srvDesc, srvHandle);
 	srvHandle.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-	desc = (*Diffuse)->GetDesc();
-	srvDesc.Format = desc.Format;
-	device->CreateShaderResourceView(*Diffuse, &srvDesc, srvHandle);
+	srvDesc = Diffuse->GetSRVDesc();
+	srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(0, 1, 2, 5);
+	device->CreateShaderResourceView(Diffuse->Resource.Get(), &srvDesc, srvHandle);
 	srvHandle.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-	desc = (*Specular)->GetDesc();
-	srvDesc.Format = desc.Format;
-	device->CreateShaderResourceView(*Specular, &srvDesc, srvHandle);
+	srvDesc = Specular->GetSRVDesc();
+	srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(0, 1, 2, 5);
+	device->CreateShaderResourceView(Specular->Resource.Get(), &srvDesc, srvHandle);
 	srvHandle.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-	desc = (*AmbientOcclusion)->GetDesc();
-	srvDesc.Format = desc.Format;
-	device->CreateShaderResourceView(*AmbientOcclusion, &srvDesc, srvHandle);
+	srvDesc = AmbientOcclusion->GetSRVDesc();
+	srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(0, 1, 2, 5);
+	device->CreateShaderResourceView(AmbientOcclusion->Resource.Get(), &srvDesc, srvHandle);
 
 	Layer = MakeUnique<ImGuiLayer>(SRVHeap);
 	Layer->OnAttach(Device);

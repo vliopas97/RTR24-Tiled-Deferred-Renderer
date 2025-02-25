@@ -14,7 +14,7 @@ static auto isValidName = [](const std::string& name)
 	};
 
 PassInputBase::PassInputBase(std::string&& name, D3D12_RESOURCE_STATES state)
-	: Name(std::move(name)), State(state)
+	: Name(std::move(name))
 {
 	if (Name.empty())
 		throw std::invalid_argument("Invalid name - Empty pass name");
@@ -24,7 +24,7 @@ PassInputBase::PassInputBase(std::string&& name, D3D12_RESOURCE_STATES state)
 }
 
 PassOutputBase::PassOutputBase(std::string&& name, D3D12_RESOURCE_STATES state)
-	:Name(std::move(name)), State(state)
+	:Name(std::move(name))
 {}
 
 
@@ -42,7 +42,7 @@ void PassInputBase::SetTarget(std::string passName, std::string outputName)
 }
 
 RenderPass::RenderPass(std::string&& name)
-	:Name(name), RTVBuffer(MakeShared<ID3D12ResourcePtr>()), DSVBuffer(MakeShared<ID3D12ResourcePtr>())
+	:Name(name), RTVBuffer(MakeShared<DX::Texture>()), DSVBuffer(MakeShared<DX::Texture>())
 {}
 
 void RenderPass::Init(ID3D12Device5Ptr device)
@@ -110,31 +110,31 @@ void RenderPass::Validate()
 	for (auto& out : Outputs)
 		out->Validate();
 }
-
-std::vector<UniquePtr<TransitionBase>> RenderPass::GetInverseTransitions(const TransitionsArray& transitions)
-{
-	std::vector<UniquePtr<TransitionBase>> extraTransitions;
-
-	for (const auto& input : Inputs)
-	{
-		auto it = std::find_if(Outputs.begin(), Outputs.end(), [&input](UniquePtr<PassOutputBase>& output)
-				  {
-					  return input->GetRscPtr() == output->GetRscPtr();
-				  }
-		);
-
-		if (it == Outputs.end()) continue;
-
-		if (input->GetResourceState() == (*it)->GetResourceState()) continue;
-
-		auto& ptr = input->BuildTransition(input->GetResourceState(), (*it)->GetResourceState());
-		if (!ptr.has_value()) continue;
-
-		extraTransitions.emplace_back( std::move(ptr.value()));
-	}
-
-	return extraTransitions;
-}
+//
+//std::vector<UniquePtr<TransitionBase>> RenderPass::GetInverseTransitions(const TransitionsArray& transitions)
+//{
+//	std::vector<UniquePtr<TransitionBase>> extraTransitions;
+//
+//	for (const auto& input : Inputs)
+//	{
+//		auto it = std::find_if(Outputs.begin(), Outputs.end(), [&input](UniquePtr<PassOutputBase>& output)
+//				  {
+//					  return input->GetRscPtr() == output->GetRscPtr();
+//				  }
+//		);
+//
+//		if (it == Outputs.end()) continue;
+//
+//		if (input->GetResourceState() == (*it)->GetResourceState()) continue;
+//
+//		auto& ptr = input->BuildTransition(input->GetResourceState(), (*it)->GetResourceState());
+//		if (!ptr.has_value()) continue;
+//
+//		extraTransitions.emplace_back( std::move(ptr.value()));
+//	}
+//
+//	return extraTransitions;
+//}
 
 void RenderPass::Register(UniquePtr<PassInputBase> input)
 {

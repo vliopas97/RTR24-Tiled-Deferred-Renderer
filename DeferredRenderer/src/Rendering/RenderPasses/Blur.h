@@ -19,7 +19,7 @@ protected:
 	DX::DescriptorHeap RTVHeap;
 	D3D12_CPU_DESCRIPTOR_HANDLE RTVHandle{};
 
-	SharedPtr<ID3D12ResourcePtr> SRVToBlur;
+	SharedPtr<DX::Texture> SRVToBlur;
 	ResourceGPU_CBV<BlurPassControls> Controls;
 };
 
@@ -27,6 +27,8 @@ class HorizontalBlurPass final : public BlurPass
 {
 public:
 	HorizontalBlurPass(std::string&& name);
+	void PreExecTransitions(ID3D12GraphicsCommandList4Ptr cmdList) override;
+	void PostExecTransitions(ID3D12GraphicsCommandList4Ptr cmdList) override;
 protected:
 	void InitResources(ID3D12Device5Ptr device) override;
 };
@@ -35,6 +37,8 @@ class VerticalBlurPass final : public BlurPass
 {
 public:
 	VerticalBlurPass(std::string&& name);
+	void PreExecTransitions(ID3D12GraphicsCommandList4Ptr cmdList) override;
+	void PostExecTransitions(ID3D12GraphicsCommandList4Ptr cmdList) override;
 protected:
 	void InitResources(ID3D12Device5Ptr device) override;
 };
@@ -44,6 +48,8 @@ class CombinedBlurPass : public RenderPass
 public:
 	CombinedBlurPass(std::string&& name, bool flag = true);
 	virtual void Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene) override;
+	void PreExecTransitions(ID3D12GraphicsCommandList4Ptr cmdList) override;
+	void PostExecTransitions(ID3D12GraphicsCommandList4Ptr cmdList) override;
 protected:
 	virtual void InitResources(ID3D12Device5Ptr device) override;
 	virtual void InitRootSignature() override;
@@ -54,8 +60,8 @@ protected:
 	DX::DescriptorHeap SRVHeap;
 	DX::DescriptorHeap UAVHeap;
 
-	SharedPtr<ID3D12ResourcePtr> SRVToBlur;
-	SharedPtr<ID3D12ResourcePtr> BlurOutput;
+	SharedPtr<DX::Texture> SRVToBlur;
+	SharedPtr<DX::Texture> BlurOutput;
 
 	static DX::DescriptorHeap FiltersHeap;
 	static ID3D12ResourcePtr Filters;

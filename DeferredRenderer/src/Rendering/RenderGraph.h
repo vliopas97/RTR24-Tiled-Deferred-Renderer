@@ -52,15 +52,12 @@ private:
 	void AddGlobalOutputs(UniquePtr<PassOutputBase> out);
 
 private:
-	using Transitions2DArray = std::vector<std::vector<UniquePtr<TransitionBase>>>;
-
 	ID3D12Device5Ptr Device;
 	std::vector<UniquePtr<PassInputBase>> GraphOutputs;
 	std::vector<UniquePtr<PassOutputBase>> GraphInputs;
-	Transitions2DArray Transitions;
 
-	SharedPtr<ID3D12ResourcePtr> RTVBuffer{};
-	SharedPtr<ID3D12ResourcePtr> DSVBuffer{};
+	SharedPtr<DX::Texture> RTVBuffer{};
+	SharedPtr<DX::Texture> DSVBuffer{};
 
 	bool IsValidated = false;
 };

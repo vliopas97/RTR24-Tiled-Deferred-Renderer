@@ -135,9 +135,16 @@ private:
 }
 
 
-//#ifndef NDEBUG
-#define ASSERT(condition, msg)\
-if(!(condition)) throw EXCEPTION(msg);
+#ifdef NDEBUG
+#define ASSERT(condition, msg) \
+        if (!(condition)) throw EXCEPTION(msg);
+#else
+#define ASSERT(condition, msg) \
+        if (!(condition)) { \
+            __debugbreak(); /* Break into the debugger in Debug mode */ \
+        }
+#endif
+
 
 #define GRAPHICS_ASSERT(hrcall)\
 {	DXGIInfoManager InfoManager;\

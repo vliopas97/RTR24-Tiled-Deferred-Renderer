@@ -85,30 +85,52 @@ void Graphics::Init()
 	{
 		GRAPHICS_ASSERT(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
 													   IID_PPV_ARGS(&FrameObjects[i].CmdAllocator)));
-		GRAPHICS_ASSERT(SwapChain->GetBuffer(i, IID_PPV_ARGS(&FrameObjects[i].SwapChainBuffer)));
+		//GRAPHICS_ASSERT(SwapChain->GetBuffer(i, IID_PPV_ARGS(&FrameObjects[i].SwapChainBuffer.Resource)));
+		ID3D12ResourcePtr backBuffer;
+		GRAPHICS_ASSERT(SwapChain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
+		FrameObjects[i].SwapChainBuffer = DX::CreateRenderTarget(Device, backBuffer);
+
 		FrameObjects[i].RTVHandle = D3D::CreateRTV(Device, 
-												   FrameObjects[i].SwapChainBuffer,
+												   FrameObjects[i].SwapChainBuffer.Resource,
 												   RTVHeap.Heap, 
 												   RTVHeap.UsedEntries,
 												   DXGI_FORMAT_R8G8B8A8_UNORM_SRGB);
 
-		D3D12_CLEAR_VALUE depthOptimizedClearValue{};
-		depthOptimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT;
-		depthOptimizedClearValue.DepthStencil.Depth = 1.0f;
-		depthOptimizedClearValue.DepthStencil.Stencil = 0;
+		//D3D12_CLEAR_VALUE depthOptimizedClearValue{};
+		//depthOptimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT;
+		//depthOptimizedClearValue.DepthStencil.Depth = 1.0f;
+		//depthOptimizedClearValue.DepthStencil.Stencil = 0;
 
-		GRAPHICS_ASSERT(Device->CreateCommittedResource(
-			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-			D3D12_HEAP_FLAG_NONE,
-			&CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, SwapChainSize.x, SwapChainSize.y, 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL),
-			D3D12_RESOURCE_STATE_DEPTH_WRITE,
-			&depthOptimizedClearValue,
-			IID_PPV_ARGS(&FrameObjects[i].DepthStencilBuffer)
-		));
+		//GRAPHICS_ASSERT(Device->CreateCommittedResource(
+		//	&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		//	D3D12_HEAP_FLAG_NONE,
+		//	&CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, SwapChainSize.x, SwapChainSize.y, 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL),
+		//	D3D12_RESOURCE_STATE_DEPTH_WRITE,
+		//	&depthOptimizedClearValue,
+		//	IID_PPV_ARGS(&FrameObjects[i].DepthStencilBuffer.Resource)
+		//));
+
+		DX::TextureCreateInfo depthTextureInfo{};
+		depthTextureInfo.device = Device;
+		depthTextureInfo.width = SwapChainSize.x;
+		depthTextureInfo.height = SwapChainSize.y;
+		depthTextureInfo.depth = 1;
+		depthTextureInfo.format = DXGI_FORMAT_D32_FLOAT;
+		depthTextureInfo.flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+		depthTextureInfo.resDim = RESOURCE_DIMENSION::RESOURCE_DIMENSION_TEXTURE2D;
+		depthTextureInfo.viewDim = VIEW_DIMENSION::VIEW_DIMENSION_TEXTURE2D;
+		depthTextureInfo.initialResourceState = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+		depthTextureInfo.clearValue.Format = DXGI_FORMAT_D32_FLOAT;
+		depthTextureInfo.clearValue.DepthStencil.Depth = 1.0f;
+		depthTextureInfo.clearValue.DepthStencil.Stencil = 0;
+
+		// Create the depth texture
+		FrameObjects[i].DepthStencilBuffer = DX::Texture(&depthTextureInfo);
+
 
 		// DSV Handles
 		FrameObjects[i].DSVHandle = D3D::CreateDSV(Device,
-												   FrameObjects[i].DepthStencilBuffer,
+												   FrameObjects[i].DepthStencilBuffer.Resource,
 												   DSVHeap.Heap,
 												   DSVHeap.UsedEntries,
 												   DXGI_FORMAT_D32_FLOAT);

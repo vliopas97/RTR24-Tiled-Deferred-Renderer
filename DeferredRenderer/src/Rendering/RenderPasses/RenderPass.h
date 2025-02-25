@@ -6,6 +6,7 @@
 #include "Rendering/Resources.h"
 
 #include "DX12/dxDescriptorHeap.h"
+#include "DX12/dxTexture.h"
 
 #include <optional>
 
@@ -20,21 +21,15 @@ public:
 	inline const std::string& GetName() const noexcept { return Name; }
 	inline const std::string& GetPassName() const noexcept { return PassName; }
 	inline const std::string& GetOutputName() const noexcept { return OutputName; }
-	inline const D3D12_RESOURCE_STATES GetResourceState() const { return State; }
 
 	void SetTarget(std::string passName, std::string outputName);
 
 	virtual void Bind(PassOutputBase& out) = 0;
 	virtual void Validate() const = 0;
-	virtual std::optional<UniquePtr<TransitionBase>> GetResourceTransition(D3D12_RESOURCE_STATES prev) const = 0;
 	virtual const void* const GetRscPtr() const = 0;
-	virtual std::optional<UniquePtr<TransitionBase>> BuildTransition(D3D12_RESOURCE_STATES prev, D3D12_RESOURCE_STATES next) const = 0;
 
 protected:
 	PassInputBase(std::string&& name, D3D12_RESOURCE_STATES state);
-
-protected:
-	D3D12_RESOURCE_STATES State;
 
 private:
 	std::string Name;
@@ -47,12 +42,13 @@ template<ResourceType T>
 class PassInput : public PassInputBase
 {
 public:
-	PassInput(std::string&& name, SharedPtr<T>& resource, D3D12_RESOURCE_STATES state)
+	PassInput(std::string&& name, SharedPtr<T>& resource)
 		:PassInputBase(std::move(name), state), Resource(resource)
 	{}
 
 	PassInput(std::string&& name, SharedPtr<T>& resource) requires (std::is_base_of_v<ID3D12DescriptorHeapPtr, T> ||
-																	std::is_base_of_v<DX::DescriptorHeap, T>)
+																	std::is_base_of_v<DX::DescriptorHeap, T> ||
+																	std::is_base_of_v<DX::Texture, T>)
 		: PassInputBase(std::move(name), (D3D12_RESOURCE_STATES)0), Resource(resource)
 	{}
 
@@ -74,37 +70,10 @@ public:
 
 	inline const D3D12_RESOURCE_STATES GetResourceState() const { return State; }
 
-	virtual std::optional<UniquePtr<TransitionBase>> GetResourceTransition(D3D12_RESOURCE_STATES prev) const override
-	{
-		return GetResourceTransitionImpl(prev);
-	}
-
-	virtual std::optional<UniquePtr<TransitionBase>> BuildTransition(D3D12_RESOURCE_STATES prev, D3D12_RESOURCE_STATES next) const override
-	{
-		return BuildTransitionImpl(prev, next);
-	}
-
 	const void* const GetRscPtr() const override { return reinterpret_cast<void*>(Resource.get()); }
 
 
 private:
-	template <typename U = T>
-	std::optional<UniquePtr<TransitionBase>> GetResourceTransitionImpl(D3D12_RESOURCE_STATES prev) const
-	{
-		if constexpr (std::is_base_of_v<ID3D12DescriptorHeapPtr, U> || std::is_base_of_v<DX::DescriptorHeap, T>)
-			return std::nullopt;
-		else
-			return MakeUnique<Transition<U>>(Resource, prev, State);
-	}
-
-	template <typename U = T>
-	std::optional<UniquePtr<TransitionBase>> BuildTransitionImpl(D3D12_RESOURCE_STATES prev, D3D12_RESOURCE_STATES next) const
-	{
-		if constexpr (std::is_base_of_v<ID3D12DescriptorHeapPtr, U> || std::is_base_of_v<DX::DescriptorHeap, T>)
-			return std::nullopt;
-		else
-			return MakeUnique<Transition<U>>(Resource, prev, next);
-	}
 
 private:
 	SharedPtr<T>& Resource;
@@ -117,15 +86,11 @@ public:
 	virtual ~PassOutputBase() = default;
 
 	const std::string& GetName() const noexcept { return Name; }
-	inline const D3D12_RESOURCE_STATES GetResourceState() const { return State; }
 	virtual void Validate() const = 0;
 	virtual const void* const GetRscPtr() const = 0;
 
 protected:
 	PassOutputBase(std::string&& name, D3D12_RESOURCE_STATES state);
-
-protected:
-	D3D12_RESOURCE_STATES State;
 
 private:
 	std::string Name;
@@ -135,12 +100,13 @@ template<ResourceType T>
 class PassOutput : public PassOutputBase
 {
 public:
-	PassOutput(std::string&& name, SharedPtr<T>& resource, D3D12_RESOURCE_STATES state)
+	PassOutput(std::string&& name, SharedPtr<T>& resource)
 		:PassOutputBase(std::move(name), state), Resource(resource)
 	{}
 
 	PassOutput(std::string&& name, SharedPtr<T>& resource) requires(std::is_base_of_v<ID3D12DescriptorHeapPtr, T> ||
-																	std::is_base_of_v<DX::DescriptorHeap, T>)
+																	std::is_base_of_v<DX::DescriptorHeap, T> ||
+																	std::is_base_of_v<DX::Texture, T>)
 		: PassOutputBase(std::move(name), (D3D12_RESOURCE_STATES)0), Resource(resource)
 	{}
 
@@ -164,8 +130,6 @@ private:
 
 class RenderPass
 {
-	using TransitionsArray = std::vector<UniquePtr<TransitionBase>>;
-
 public:
 	RenderPass(std::string&& name);
 	virtual ~RenderPass() = default;
@@ -173,6 +137,8 @@ public:
 	void Init(ID3D12Device5Ptr device);
 	// Submit Render Pass commands to cmdList - Does not include cmdList execution
 	virtual void Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene) = 0;
+	virtual void PreExecTransitions(ID3D12GraphicsCommandList4Ptr cmdList) = 0;
+	virtual void PostExecTransitions(ID3D12GraphicsCommandList4Ptr cmdList) = 0;
 
 	inline ID3D12PipelineStatePtr GetPSO() { return PipelineState; }
 	inline const std::string& GetName() const noexcept { return Name; }
@@ -187,8 +153,6 @@ public:
 
 	// For resources that are not propagated further they must be transitioned back to where they were
 	// to be in proper state for the next frame iteration through the graph
-	std::vector<UniquePtr<TransitionBase>> GetInverseTransitions(const TransitionsArray& transitions);
-
 protected:
 	virtual void Bind(ID3D12GraphicsCommandList4Ptr cmdList) const;
 	virtual void InitResources(ID3D12Device5Ptr device);
@@ -214,8 +178,8 @@ protected:
 	RootSignature RootSignatureData;
 	std::vector<DX::DescriptorHeap> Heaps;
 
-	SharedPtr<ID3D12ResourcePtr> RTVBuffer{};
-	SharedPtr<ID3D12ResourcePtr> DSVBuffer{};
+	SharedPtr<DX::Texture> RTVBuffer{};
+	SharedPtr<DX::Texture> DSVBuffer{};
 
 	std::vector<UniquePtr<PassInputBase>> Inputs;
 	std::vector<UniquePtr<PassOutputBase>> Outputs;

@@ -73,8 +73,34 @@ void Scene::InitializeTextures(ID3D12Device5Ptr device, ID3D12CommandQueuePtr cm
 
 	for (const auto& pair : TextureIndexMap)
 	{
-		TextureResources.emplace_back(MakeUnique<Texture>(device, cmdQueue, srvHeapIt->CPUHandle, FilesLocation + pair.first));
-		srvHeapIt++;
+		auto filename = pair.first;
+
+		DX::TextureCreateInfo texCreateInfo{};
+		texCreateInfo.device = device;
+		texCreateInfo.format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+		texCreateInfo.initialResourceState = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE;
+		texCreateInfo.viewDim = VIEW_DIMENSION_TEXTURE2D;
+		texCreateInfo.resDim = RESOURCE_DIMENSION_TEXTURE2D;
+
+		bool isNormalMap = filename.find("ddn") != std::string::npos ||
+			filename.find("NRM") != std::string::npos;
+		bool isPNG = filename.find(".png") != std::string::npos;
+
+		if (isNormalMap)
+		{
+			if (!isPNG || filename.find("arch_ddn") != std::string::npos)
+				texCreateInfo.format = DXGI_FORMAT_R8G8B8A8_UNORM;
+			else
+				texCreateInfo.format = DXGI_FORMAT_B8G8R8A8_UNORM;
+		}
+
+		texCreateInfo.generateMipMaps = !isNormalMap;
+
+		UniquePtr<DX::Texture> t = MakeUnique<DX::Texture>(&texCreateInfo, FilesLocation + filename);
+		auto desc = t->GetSRVDesc();
+		device->CreateShaderResourceView(t->Resource.Get(), &desc, (srvHeapIt++)->CPUHandle);
+
+		TextureResources.emplace_back(std::move(t));
 	}
 }
 

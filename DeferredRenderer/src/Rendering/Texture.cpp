@@ -61,6 +61,11 @@ Texture::Texture(ID3D12Device5Ptr device, ID3D12CommandQueuePtr CmdQueue, D3D12_
     D3D12_SUBRESOURCE_DATA textureData = { Image.GetPixels(), Image.GetImage(0, 0, 0)->rowPitch, 0};
     resourceUpload.Upload(TextureResource, 0, &textureData, 1);
 
+    /*auto uploadResourcesFinished = */resourceUpload.End(CmdQueue).wait();
+    //uploadResourcesFinished.wait();
+
+    resourceUpload.Begin();
+
     if (!isNormalMap)
     {
         resourceUpload.Transition(
@@ -77,7 +82,7 @@ Texture::Texture(ID3D12Device5Ptr device, ID3D12CommandQueuePtr CmdQueue, D3D12_
 
     }
 
-    auto uploadResourcesFinished = resourceUpload.End(CmdQueue);
-    uploadResourcesFinished.wait();
+    /*uploadResourcesFinished = */resourceUpload.End(CmdQueue).wait();
+    //uploadResourcesFinished.wait();
 
 }

@@ -4,26 +4,40 @@
 LightingPass::LightingPass(std::string&& name)
 	:RenderPass(std::move(name))
 {
-	//Register<PassInput<ID3D12ResourcePtr>>("renderTarget", RTVBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
-	Register<PassInput<ID3D12ResourcePtr>>("positions", Positions, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	Register<PassInput<ID3D12ResourcePtr>>("normals", Normals, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	Register<PassInput<ID3D12ResourcePtr>>("diffuse", Diffuse, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	Register<PassInput<ID3D12ResourcePtr>>("specular", Specular, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	Register<PassInput<ID3D12ResourcePtr>>("ambientOcclusion", AmbientOcclusion, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	//Register<PassInput<ID3D12ResourcePtr>>("renderTarget", RTVBuffer);
+	Register<PassInput<DX::Texture>>("positions", Positions);
+	Register<PassInput<DX::Texture>>("normals", Normals);
+	Register<PassInput<DX::Texture>>("diffuse", Diffuse);
+	Register<PassInput<DX::Texture>>("specular", Specular);
+	Register<PassInput<DX::Texture>>("ambientOcclusion", AmbientOcclusion);
 	Register<PassInput<DX::DescriptorHeap>>("srvHeap", GBufferHeap);
 
-	Register<PassOutput<ID3D12ResourcePtr>>("renderTarget", RTVBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	Register<PassOutput<ID3D12ResourcePtr>>("positions", Positions, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	Register<PassOutput<ID3D12ResourcePtr>>("normals", Normals, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	Register<PassOutput<ID3D12ResourcePtr>>("diffuse", Diffuse, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	Register<PassOutput<ID3D12ResourcePtr>>("specular", Specular, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	Register<PassOutput<ID3D12ResourcePtr>>("ambientOcclusion", AmbientOcclusion, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	Register<PassOutput<DX::Texture>>("renderTarget", RTVBuffer);
+	Register<PassOutput<DX::Texture>>("positions", Positions);
+	Register<PassOutput<DX::Texture>>("normals", Normals);
+	Register<PassOutput<DX::Texture>>("diffuse", Diffuse);
+	Register<PassOutput<DX::Texture>>("specular", Specular);
+	Register<PassOutput<DX::Texture>>("ambientOcclusion", AmbientOcclusion);
 	Register<PassOutput<DX::DescriptorHeap>>("srvHeap", GBufferHeap);
 }
 
 void LightingPass::Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene)
 {
 	Bind(cmdList);
+}
+
+void LightingPass::PreExecTransitions(ID3D12GraphicsCommandList4Ptr cmdList)
+{
+	Positions->TransitionTo(cmdList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	Normals->TransitionTo(cmdList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	Diffuse->TransitionTo(cmdList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	Specular->TransitionTo(cmdList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	AmbientOcclusion->TransitionTo(cmdList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+}
+
+void LightingPass::PostExecTransitions(ID3D12GraphicsCommandList4Ptr cmdList)
+{
+	RTVBuffer->TransitionTo(cmdList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 }
 
 void LightingPass::Bind(ID3D12GraphicsCommandList4Ptr cmdList) const
@@ -52,46 +66,30 @@ void LightingPass::Bind(ID3D12GraphicsCommandList4Ptr cmdList) const
 
 void LightingPass::InitResources(ID3D12Device5Ptr device)
 {
-	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
-	srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-	srvDesc.Texture2D.MipLevels = 1;
-	srvDesc.Texture2D.MostDetailedMip = 0;
-	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
-
 	AOHeap.Create(device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
-	device->CreateShaderResourceView(*AmbientOcclusion, &srvDesc, AOHeap.begin()->CPUHandle);
 
-	// Create Render Target
-	D3D12_CLEAR_VALUE clearValue = {};
-	clearValue.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-	clearValue.Color[0] = 1.0f;
-	clearValue.Color[1] = 1.0f;
-	clearValue.Color[2] = 1.0f;
-	clearValue.Color[3] = 1.0f;
+	auto srvDesc = AmbientOcclusion->GetSRVDesc();
+	device->CreateShaderResourceView(AmbientOcclusion->Resource.Get(), &srvDesc, AOHeap.begin()->CPUHandle);
 
-	auto resDesc = CD3DX12_RESOURCE_DESC(
-		D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-		D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT,
-		Globals.WindowDimensions.x, Globals.WindowDimensions.y, 1, 1,
-		DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,
-		1, 0,
-		D3D12_TEXTURE_LAYOUT_UNKNOWN, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
+	DX::TextureCreateInfo rtvTextureInfo;
+	rtvTextureInfo.device = device;
+	rtvTextureInfo.width = Globals.WindowDimensions.x;
+	rtvTextureInfo.height = Globals.WindowDimensions.y;
+	rtvTextureInfo.depth = 1;
+	rtvTextureInfo.format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	rtvTextureInfo.flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+	rtvTextureInfo.resDim = RESOURCE_DIMENSION_TEXTURE2D;
+	rtvTextureInfo.viewDim = VIEW_DIMENSION_TEXTURE2D;
+	rtvTextureInfo.initialResourceState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+	rtvTextureInfo.clearValue = { .Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, .Color = {1.0f, 1.0f, 1.0f, 1.0f} };
 
-	ID3D12ResourcePtr renderTarget;
-	GRAPHICS_ASSERT(device->CreateCommittedResource(
-		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-		D3D12_HEAP_FLAG_NONE,
-		&resDesc,
-		D3D12_RESOURCE_STATE_RENDER_TARGET,
-		&clearValue,
-		IID_PPV_ARGS(&renderTarget)));
-	RTVBuffer = MakeShared<ID3D12ResourcePtr>(renderTarget);
+	// Create Render Target Texture
+	RTVBuffer = MakeShared<DX::Texture>(&rtvTextureInfo);
+
 
 	// RTV Heap
 	RTVHeap.Create(device, 1, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, false);
-	device->CreateRenderTargetView(*RTVBuffer, nullptr, RTVHeap.begin()->CPUHandle);
+	device->CreateRenderTargetView(RTVBuffer->Resource.Get(), nullptr, RTVHeap.begin()->CPUHandle);
 
 	Heaps.push_back(*GBufferHeap);
 	Heaps.push_back(AOHeap);

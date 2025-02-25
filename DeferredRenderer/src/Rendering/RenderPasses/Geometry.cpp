@@ -5,16 +5,16 @@
 GeometryPass::GeometryPass(std::string&& name) :
 	RenderPass(std::move(name))
 {
-	Positions = MakeShared<ID3D12ResourcePtr>();
-	Normals = MakeShared<ID3D12ResourcePtr>();
-	Diffuse = MakeShared<ID3D12ResourcePtr>();
+	Positions = MakeShared<DX::Texture>();
+	Normals = MakeShared<DX::Texture>();
+	Diffuse = MakeShared<DX::Texture>();
 
-	Register<PassInput<ID3D12ResourcePtr>>("depthBuffer", DSVBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE);
-	Register<PassOutput<ID3D12ResourcePtr>>("depthBuffer", DSVBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE);
-	Register<PassOutput<ID3D12ResourcePtr>>("positions", Positions, D3D12_RESOURCE_STATE_RENDER_TARGET);
-	Register<PassOutput<ID3D12ResourcePtr>>("normals", Normals, D3D12_RESOURCE_STATE_RENDER_TARGET);
-	Register<PassOutput<ID3D12ResourcePtr>>("diffuse", Diffuse, D3D12_RESOURCE_STATE_RENDER_TARGET);
-	Register<PassOutput<ID3D12ResourcePtr>>("specular", Specular, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	Register<PassInput<DX::Texture>>("depthBuffer", DSVBuffer);
+	Register<PassOutput<DX::Texture>>("depthBuffer", DSVBuffer);
+	Register<PassOutput<DX::Texture>>("positions", Positions);
+	Register<PassOutput<DX::Texture>>("normals", Normals);
+	Register<PassOutput<DX::Texture>>("diffuse", Diffuse);
+	Register<PassOutput<DX::Texture>>("specular", Specular);
 	Register<PassOutput<DX::DescriptorHeap>>("srvHeap", SRVHeap);
 }
 
@@ -46,93 +46,60 @@ void GeometryPass::Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& sc
 	scene.Bind<GeometryPass>(cmdList);
 }
 
+void GeometryPass::PreExecTransitions(ID3D12GraphicsCommandList4Ptr cmdList)
+{
+	DSVBuffer->TransitionTo(cmdList, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+}
+
+void GeometryPass::PostExecTransitions(ID3D12GraphicsCommandList4Ptr cmdList)
+{
+	Positions->TransitionTo(cmdList, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	Normals->TransitionTo(cmdList, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	Diffuse->TransitionTo(cmdList, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	Specular->TransitionTo(cmdList, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	DSVBuffer->TransitionTo(cmdList, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+}
+
 void GeometryPass::InitResources(ID3D12Device5Ptr device)
 {
-	D3D12_CLEAR_VALUE clearValue = {};
-	clearValue.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-	clearValue.Color[0] = 0.0f; // Default clear color
-	clearValue.Color[1] = 0.0f;
-	clearValue.Color[2] = 0.0f;
-	clearValue.Color[3] = 1.0f;
-
-	auto resDesc = CD3DX12_RESOURCE_DESC(
-		D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-		D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT,
-		Globals.WindowDimensions.x, Globals.WindowDimensions.y, 1, 1,
-		DXGI_FORMAT_R32G32B32A32_FLOAT,
-		1, 0,
-		D3D12_TEXTURE_LAYOUT_UNKNOWN, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET);
-
-	ID3D12ResourcePtr positions;
-	GRAPHICS_ASSERT(device->CreateCommittedResource(
-		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-		D3D12_HEAP_FLAG_NONE,
-		&resDesc,
-		D3D12_RESOURCE_STATE_RENDER_TARGET,
-		&clearValue,
-		IID_PPV_ARGS(&positions)));
-	Positions = MakeShared<ID3D12ResourcePtr>(positions);
-
-	ID3D12ResourcePtr normals;
-	GRAPHICS_ASSERT(device->CreateCommittedResource(
-		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-		D3D12_HEAP_FLAG_NONE,
-		&resDesc,
-		D3D12_RESOURCE_STATE_RENDER_TARGET,
-		&clearValue,
-		IID_PPV_ARGS(&normals)));
-	Normals = MakeShared<ID3D12ResourcePtr>(normals);
-
-	resDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-	clearValue.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-
-	ID3D12ResourcePtr diffuse;
-	GRAPHICS_ASSERT(device->CreateCommittedResource(
-		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-		D3D12_HEAP_FLAG_NONE,
-		&resDesc,
-		D3D12_RESOURCE_STATE_RENDER_TARGET,
-		&clearValue,
-		IID_PPV_ARGS(&diffuse)));
-	Diffuse = MakeShared<ID3D12ResourcePtr>(diffuse);
-
-	ID3D12ResourcePtr specular;
-	GRAPHICS_ASSERT(device->CreateCommittedResource(
-		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-		D3D12_HEAP_FLAG_NONE,
-		&resDesc,
-		D3D12_RESOURCE_STATE_RENDER_TARGET,
-		&clearValue,
-		IID_PPV_ARGS(&specular)));
-	Specular = MakeShared<ID3D12ResourcePtr>(specular);
-
 	RTVHeap.Create(device, 4, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, false);
 
 	SRVHeap = MakeShared<DX::DescriptorHeap>();
 	SRVHeap->Create(device, 4, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
 
-	// Creating Render Target Views
-	device->CreateRenderTargetView(*Positions, nullptr, RTVHeap[0].CPUHandle);
-	device->CreateRenderTargetView(*Normals, nullptr, RTVHeap[1].CPUHandle);
-	device->CreateRenderTargetView(*Diffuse, nullptr, RTVHeap[2].CPUHandle);
-	device->CreateRenderTargetView(*Specular, nullptr, RTVHeap[3].CPUHandle);
+	DX::TextureCreateInfo texDesc{};
+	texDesc.device = device;
+	texDesc.clearValue = {.Format = DXGI_FORMAT_R32G32B32A32_FLOAT, .Color = {0.0f, 0.0f, 0.0f, 1.0f} };
+	texDesc.format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+	texDesc.width = Globals.WindowDimensions.x;
+	texDesc.height = Globals.WindowDimensions.y;
+	texDesc.initialResourceState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+	texDesc.resDim = RESOURCE_DIMENSION_TEXTURE2D;
+	texDesc.viewDim = VIEW_DIMENSION_TEXTURE2D;
+	texDesc.flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
 
-	// Creating Shader Visible Views to be used in subsequent Lighting Pass
-	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	srvDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-	srvDesc.Texture2D.MipLevels = 1;
-	srvDesc.Texture2D.MostDetailedMip = 0;
-	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+	Positions = MakeShared<DX::Texture>(&texDesc);
+	Normals = MakeShared<DX::Texture>(&texDesc);
+
+	texDesc.format = texDesc.clearValue.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	Diffuse = MakeShared<DX::Texture>(&texDesc);
+	Specular = MakeShared<DX::Texture>(&texDesc);
+
+	// Creating Render Target Views
+	device->CreateRenderTargetView(Positions->Resource.Get(), nullptr, RTVHeap[0].CPUHandle);
+	device->CreateRenderTargetView(Normals->Resource.Get(), nullptr, RTVHeap[1].CPUHandle);
+	device->CreateRenderTargetView(Diffuse->Resource.Get(), nullptr, RTVHeap[2].CPUHandle);
+	device->CreateRenderTargetView(Specular->Resource.Get(), nullptr, RTVHeap[3].CPUHandle);
 
 	auto& srvHeap = *SRVHeap;
-	device->CreateShaderResourceView(*Positions, &srvDesc, srvHeap[0].CPUHandle);
-	device->CreateShaderResourceView(*Normals, &srvDesc, srvHeap[1].CPUHandle);
 
-	srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-	device->CreateShaderResourceView(*Diffuse, &srvDesc, srvHeap[2].CPUHandle);
-	device->CreateShaderResourceView(*Specular, &srvDesc, srvHeap[3].CPUHandle);
+	auto srvDesc = Positions->GetSRVDesc();
+	device->CreateShaderResourceView(Positions->Resource.Get(), &srvDesc, srvHeap[0].CPUHandle);
+	device->CreateShaderResourceView(Normals->Resource.Get(), &srvDesc, srvHeap[1].CPUHandle);
+
+	srvDesc = Diffuse->GetSRVDesc();
+	device->CreateShaderResourceView(Diffuse->Resource.Get(), &srvDesc, srvHeap[2].CPUHandle);
+	device->CreateShaderResourceView(Specular->Resource.Get(), &srvDesc, srvHeap[3].CPUHandle);
 
 	Heaps.push_back(Globals.SRVHeap);
 	Heaps.push_back(Globals.CBVHeap);

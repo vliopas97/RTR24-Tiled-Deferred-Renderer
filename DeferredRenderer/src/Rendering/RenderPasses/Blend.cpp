@@ -4,12 +4,12 @@
 BlendPass::BlendPass(std::string&& name)
 	:RenderPass(std::move(name))
 {
-	Register<PassInput<ID3D12ResourcePtr>>("renderTarget", RTVBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
-	Register<PassInput<ID3D12ResourcePtr>>("pixelsColor", OriginalColor, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	Register<PassInput<ID3D12ResourcePtr>>("reflectionColor", ReflectionColor, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	Register<PassInput<DX::Texture>>("renderTarget", RTVBuffer);
+	Register<PassInput<DX::Texture>>("pixelsColor", OriginalColor);
+	Register<PassInput<DX::Texture>>("reflectionColor", ReflectionColor);
 
-	Register<PassOutput<ID3D12ResourcePtr>>("reflectionColor", ReflectionColor, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-	Register<PassOutput<ID3D12ResourcePtr>>("renderTarget", RTVBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	Register<PassOutput<DX::Texture>>("reflectionColor", ReflectionColor);
+	Register<PassOutput<DX::Texture>>("renderTarget", RTVBuffer);
 }
 
 void BlendPass::InitResources(ID3D12Device5Ptr device)
@@ -24,8 +24,8 @@ void BlendPass::InitResources(ID3D12Device5Ptr device)
 	srvDesc.Texture2D.MostDetailedMip = 0;
 	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
 
-	device->CreateShaderResourceView(*OriginalColor, &srvDesc, SRVHeap[0].CPUHandle);
-	device->CreateShaderResourceView(*ReflectionColor, &srvDesc, SRVHeap[1].CPUHandle);
+	device->CreateShaderResourceView(OriginalColor->Resource.Get(), &srvDesc, SRVHeap[0].CPUHandle);
+	device->CreateShaderResourceView(ReflectionColor->Resource.Get(), &srvDesc, SRVHeap[1].CPUHandle);
 
 	Heaps.push_back(SRVHeap);
 	Heaps.push_back(Globals.SamplerHeap);
@@ -52,10 +52,24 @@ void BlendPass::Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene
 	cmdList->DrawInstanced(3, 1, 0, 0);
 }
 
+void BlendPass::PreExecTransitions(ID3D12GraphicsCommandList4Ptr cmdList)
+{
+	RTVBuffer->TransitionTo(cmdList, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	OriginalColor->TransitionTo(cmdList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	ReflectionColor->TransitionTo(cmdList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+}
+
+void BlendPass::PostExecTransitions(ID3D12GraphicsCommandList4Ptr cmdList)
+{
+	OriginalColor->TransitionTo(cmdList, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	ReflectionColor->TransitionTo(cmdList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	//RTVBuffer->TransitionTo(cmdList, D3D12_RESOURCE_STATE_PRESENT);
+}
+
 void BlendPass::InitRootSignature()
 {
 	std::vector<D3D12_DESCRIPTOR_RANGE> srvRanges = {
-		DescriptorRangeBuilder::CreateRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 0, 0)
+		DescriptorRangeBuilder::CreateRange(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 0, 0)
 	};
 
 	std::vector<D3D12_DESCRIPTOR_RANGE> samplerRanges = {

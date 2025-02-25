@@ -5,28 +5,19 @@
 
 #include <optional>
 
-auto createResourceTransition = [](const PassInputBase& input, const PassOutputBase& output)
--> std::optional<UniquePtr<TransitionBase>>
-	{
-		if (input.GetResourceState() != output.GetResourceState())
-			return input.GetResourceTransition(output.GetResourceState());
-
-		return std::nullopt;
-	};
-
 RenderGraph::RenderGraph(ID3D12Device5Ptr device)
 	:Device(device)
 {
-	RTVBuffer = MakeShared<ID3D12ResourcePtr>(Globals.RTVBuffer);
-	DSVBuffer = MakeShared<ID3D12ResourcePtr>(Globals.DSVBuffer);
+	RTVBuffer = MakeShared<DX::Texture>(Globals.RTVBuffer);
+	DSVBuffer = MakeShared<DX::Texture>(Globals.DSVBuffer);
 	Globals.CBGlobalConstants.CPUData.SSAOEnabled = true;
 	Globals.CBGlobalConstants.CPUData.SSREnabled = false;
 	Globals.CBGlobalConstants.CPUData.RadiusSSAO = 0.5f;
 	Globals.CBGlobalConstants.CPUData.IntensitySSAO = 2.0f;
 
-	GraphInputs.emplace_back(MakeUnique<PassOutput<ID3D12ResourcePtr>>("renderTarget", RTVBuffer, D3D12_RESOURCE_STATE_PRESENT));
-	GraphInputs.emplace_back(MakeUnique<PassOutput<ID3D12ResourcePtr>>("depthBuffer", DSVBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE));
-	GraphOutputs.emplace_back(MakeUnique<PassInput<ID3D12ResourcePtr>>("renderTarget", RTVBuffer, D3D12_RESOURCE_STATE_PRESENT));
+	GraphInputs.emplace_back(MakeUnique<PassOutput<DX::Texture>>("renderTarget", RTVBuffer));
+	GraphInputs.emplace_back(MakeUnique<PassOutput<DX::Texture>>("depthBuffer", DSVBuffer));
+	GraphOutputs.emplace_back(MakeUnique<PassInput<DX::Texture>>("renderTarget", RTVBuffer));
 
 	// Clear Pass
 	{
@@ -90,7 +81,7 @@ RenderGraph::RenderGraph(ID3D12Device5Ptr device)
 	}
 	// Blur reflections pass
 	{
-		auto pass = MakeUnique<CombinedBlurPassGlobal>("reflectionBlur", true, 7);
+		auto pass = MakeUnique<CombinedBlurPassGlobal>("reflectionBlur", true, 4);
 		pass->SetInput("processedResource", "reflectionPass.renderTarget");
 		Add(pass);
 	}
@@ -105,6 +96,7 @@ RenderGraph::RenderGraph(ID3D12Device5Ptr device)
 	// GUI layer
 	{
 		auto pass = MakeUnique<GUIPass>("GUI");
+		pass->SetInput("renderTarget", "blend.renderTarget");
 		pass->SetInput("positions", "reflectionPass.positions");
 		pass->SetInput("normals", "reflectionPass.normals");
 		pass->SetInput("diffuse", "lightingPass.diffuse");
@@ -113,7 +105,7 @@ RenderGraph::RenderGraph(ID3D12Device5Ptr device)
 		Add(pass);
 	}
 
-	SetInputTarget("renderTarget", "blend.renderTarget");
+	SetInputTarget("renderTarget", "GUI.renderTarget");
 	Validate();
 	TransitionUnpropagatedResources();
 }
@@ -150,12 +142,14 @@ void RenderGraph::Execute(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& sc
 		Globals.CmdAllocator->Reset();
 		cmdList->Reset(Globals.CmdAllocator, pass->GetPSO());
 
-		for (auto& t : Transitions[i]) t->Apply(cmdList);// Barriers
+		//for (auto& t : Transitions[i]) t->Apply(cmdList);// Barriers
+		pass->PreExecTransitions(cmdList);
 		
 		pass->Submit(cmdList, scene);
 		
-		if (++i == Passes.size())
-			for (auto& t : Transitions[i]) t->Apply(cmdList); // Final layer of transitions (Transitions.size() = Passes.size() + 1)
+		pass->PostExecTransitions(cmdList);
+		//if (++i == Passes.size())
+		//	for (auto& t : Transitions[i]) t->Apply(cmdList); // Final layer of transitions (Transitions.size() = Passes.size() + 1)
 
 		// Submit Render Pass for execution and synchronize before calling Reset() for next iteration
 		Globals.FenceValue = D3D::SubmitCommandList(cmdList, Globals.CmdQueue, Globals.Fence, Globals.FenceValue);
@@ -166,7 +160,7 @@ void RenderGraph::Execute(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& sc
 
 void RenderGraph::LinkInputs(RenderPass& renderPass)
 {
-	std::vector<UniquePtr<TransitionBase>> passTransitions;
+	//std::vector<UniquePtr<TransitionBase>> passTransitions;
 
 	for (auto& in : renderPass.GetInputs())
 	{
@@ -182,9 +176,9 @@ void RenderGraph::LinkInputs(RenderPass& renderPass)
 					in->Bind(*out);
 					bound = true;
 
-					// TRANSITION
-					if (auto transition = createResourceTransition(*in, *out))
-						passTransitions.emplace_back(std::move(*transition));
+					//// TRANSITION
+					//if (auto transition = createResourceTransition(*in, *out))
+					//	passTransitions.emplace_back(std::move(*transition));
 
 					break;
 				}
@@ -207,17 +201,17 @@ void RenderGraph::LinkInputs(RenderPass& renderPass)
 			in->Bind(out);
 
 			// TRANSITION
-			if (auto transition = createResourceTransition(*in, out))
-				passTransitions.emplace_back(std::move(*transition));
+			//if (auto transition = createResourceTransition(*in, out))
+			//	passTransitions.emplace_back(std::move(*transition));
 		}
 	}
 
-	Transitions.emplace_back(std::move(passTransitions));
+	//Transitions.emplace_back(std::move(passTransitions));
 }
 
 void RenderGraph::LinkGlobalInputs()
 {
-	std::vector<UniquePtr<TransitionBase>> passTransitions;
+	//std::vector<UniquePtr<TransitionBase>> passTransitions;
 
 	for (auto& in : GraphOutputs)
 	{
@@ -234,11 +228,11 @@ void RenderGraph::LinkGlobalInputs()
 		in->Bind(out);
 
 		// TRANSITIONS
-		if (auto transition = createResourceTransition(*in, out))
-			passTransitions.emplace_back(std::move(*transition));
+		//if (auto transition = createResourceTransition(*in, out))
+		//	passTransitions.emplace_back(std::move(*transition));
 	}
 
-	Transitions.emplace_back(std::move(passTransitions));
+	//Transitions.emplace_back(std::move(passTransitions));
 }
 
 void RenderGraph::Validate()
@@ -253,12 +247,12 @@ void RenderGraph::Validate()
 
 void RenderGraph::TransitionUnpropagatedResources()
 {
-	UINT i = 0;
-	for (const auto& pass : Passes)
-	{
-		auto t = pass->GetInverseTransitions(Transitions[i]);
-		Transitions[++i].insert(Transitions[i].end(), std::make_move_iterator(t.begin()), std::make_move_iterator(t.end()));
-	}
+	//UINT i = 0;
+	//for (const auto& pass : Passes)
+	//{
+	//	auto t = pass->GetInverseTransitions(Transitions[i]);
+	//	Transitions[++i].insert(Transitions[i].end(), std::make_move_iterator(t.begin()), std::make_move_iterator(t.end()));
+	//}
 }
 
 void RenderGraph::AddGlobalInputs(UniquePtr<PassInputBase> in)
