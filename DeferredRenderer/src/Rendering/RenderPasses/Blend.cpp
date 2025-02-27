@@ -27,9 +27,9 @@ void BlendPass::InitResources(ID3D12Device5Ptr device)
 	device->CreateShaderResourceView(OriginalColor->Resource.Get(), &srvDesc, SRVHeap[0].CPUHandle);
 	device->CreateShaderResourceView(ReflectionColor->Resource.Get(), &srvDesc, SRVHeap[1].CPUHandle);
 
-	Heaps.push_back(SRVHeap);
 	Heaps.push_back(Globals.SamplerHeap);
 	Heaps.push_back(Globals.CBVHeap);
+	Heaps.push_back(SRVHeap);
 }
 
 void BlendPass::Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Scene& scene)
@@ -62,7 +62,7 @@ void BlendPass::PreExecTransitions(ID3D12GraphicsCommandList4Ptr cmdList)
 void BlendPass::PostExecTransitions(ID3D12GraphicsCommandList4Ptr cmdList)
 {
 	OriginalColor->TransitionTo(cmdList, D3D12_RESOURCE_STATE_RENDER_TARGET);
-	ReflectionColor->TransitionTo(cmdList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	ReflectionColor->TransitionTo(cmdList, D3D12_RESOURCE_STATE_RENDER_TARGET);
 	//RTVBuffer->TransitionTo(cmdList, D3D12_RESOURCE_STATE_PRESENT);
 }
 
@@ -80,9 +80,9 @@ void BlendPass::InitRootSignature()
 	DescriptorRangeBuilder::CreateRange(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0)
 	};
 
-	RootSignatureData.AddDescriptorTable(srvRanges, D3D12_SHADER_VISIBILITY_PIXEL);
 	RootSignatureData.AddDescriptorTable(samplerRanges, D3D12_SHADER_VISIBILITY_PIXEL);
 	RootSignatureData.AddDescriptorTable(cbvRanges, D3D12_SHADER_VISIBILITY_PIXEL);
+	RootSignatureData.AddDescriptorTable(srvRanges, D3D12_SHADER_VISIBILITY_PIXEL);
 
 	RootSignatureData.Build(Device);
 }

@@ -1,7 +1,7 @@
 #define HLSL
 #include "..\HLSLCompat.h"
 
-Texture2D TextureToBlur : register(t0);
+Texture2D InputTextures[] : register(t0);
 SamplerState smplr : register(s0);
 ConstantBuffer<BlurPassControls> Controls : register(b0);
 
@@ -35,8 +35,10 @@ static const float weights[kernelSize] =
 
 float4 main(float4 position : SV_Position) : SV_Target
 {
+    Texture2D<float4> inputTexture = InputTextures[!Controls.IsHorizontal];
+    
     uint width, height, noMips;
-    TextureToBlur.GetDimensions(0, width, height, noMips);
+    inputTexture.GetDimensions(0, width, height, noMips);
     uint2 screenSize = uint2(width, height);
     
     // Calculate normalized texture coordinates
@@ -51,8 +53,10 @@ float4 main(float4 position : SV_Position) : SV_Target
     {
         float2 offset = dir * offsets[i] / screenSize;
         float weight = weights[i];
-        output += TextureToBlur.Sample(smplr, texCoords + offset) * weight;
+        output.rgb += inputTexture.Sample(smplr, texCoords + offset).rgb * weight;
     }
+    
+    output.a = inputTexture.Sample(smplr, texCoords).a;
     
     return output;
 }

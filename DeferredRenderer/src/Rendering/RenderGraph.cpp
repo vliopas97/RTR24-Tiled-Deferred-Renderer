@@ -54,7 +54,7 @@ RenderGraph::RenderGraph(ID3D12Device5Ptr device)
 	//}
 	// Combined Blur Pass
 	{
-		auto pass = MakeUnique<CombinedBlurPassGlobal>("blur");
+		auto pass = MakeUnique<CombinedBlurPassPX>("blur");
 		pass->SetInput("processedResource", "ambientOcclusion.renderTarget");
 		Add(pass);
 	}
@@ -81,7 +81,7 @@ RenderGraph::RenderGraph(ID3D12Device5Ptr device)
 	}
 	// Blur reflections pass
 	{
-		auto pass = MakeUnique<CombinedBlurPassGlobal>("reflectionBlur", true, 4);
+		auto pass = MakeUnique<CombinedBlurPassPX>("reflectionBlur");
 		pass->SetInput("processedResource", "reflectionPass.renderTarget");
 		Add(pass);
 	}

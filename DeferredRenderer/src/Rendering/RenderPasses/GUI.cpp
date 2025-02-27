@@ -50,7 +50,7 @@ void GUIPass::PostExecTransitions(ID3D12GraphicsCommandList4Ptr cmdList)
 	Normals->TransitionTo(cmdList, D3D12_RESOURCE_STATE_RENDER_TARGET);
 	Diffuse->TransitionTo(cmdList, D3D12_RESOURCE_STATE_RENDER_TARGET);
 	Specular->TransitionTo(cmdList, D3D12_RESOURCE_STATE_RENDER_TARGET);
-	AmbientOcclusion->TransitionTo(cmdList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	AmbientOcclusion->TransitionTo(cmdList, D3D12_RESOURCE_STATE_RENDER_TARGET);
 	RTVBuffer->TransitionTo(cmdList, D3D12_RESOURCE_STATE_PRESENT);
 }
 

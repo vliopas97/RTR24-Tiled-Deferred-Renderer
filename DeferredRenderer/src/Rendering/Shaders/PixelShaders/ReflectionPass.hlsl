@@ -124,6 +124,7 @@ float4 computeReflectedColor(bool intersects, float3 intersection, float4 origin
         return reflectionColor;
 
     return originalColor;
+    
 }
 
 float4 main(float4 position : SV_Position) : SV_Target
