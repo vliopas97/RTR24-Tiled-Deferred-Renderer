@@ -154,8 +154,10 @@ float4 main(float4 position : SV_Position) : SV_Target
     bool intersects = traceIntersection(positionScreen.xyz, reflectionScreen, maxDistance, screenDims, intersection);
     
     float4 reflectionColor = computeReflectedColor(intersects, intersection, originalColor);
+    
+     // set reflectiveness to 0 for non-reflective surfaces and reflective surfaces that found no reflection
+    //reflectionColor.a = intersects ? reflectiveness : 0.0f; // alpha channel used for reflectiveness mask
     reflectionColor.a = reflectiveness;
-    //color = (1.0f - reflectiveness) * originalColor + reflectiveness * reflectionColor;
     
     return reflectionColor;;
 }

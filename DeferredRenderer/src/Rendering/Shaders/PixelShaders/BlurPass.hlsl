@@ -53,7 +53,8 @@ float4 main(float4 position : SV_Position) : SV_Target
     {
         float2 offset = dir * offsets[i] / screenSize;
         float weight = weights[i];
-        output.rgb += inputTexture.Sample(smplr, texCoords + offset).rgb * weight;
+        bool flag = inputTexture.Sample(smplr, texCoords).a != 0;
+        output.rgb += inputTexture.Sample(smplr, texCoords + offset).rgb * weight * flag;
     }
     
     output.a = inputTexture.Sample(smplr, texCoords).a;

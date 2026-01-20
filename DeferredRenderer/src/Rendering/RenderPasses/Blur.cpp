@@ -561,7 +561,7 @@ void CombinedBlurPassPX::Submit(ID3D12GraphicsCommandList4Ptr cmdList, const Sce
 	D3D12_RECT scissorRect = { 0, 0, Globals.WindowDimensions.x, Globals.WindowDimensions.y };
 	cmdList->RSSetScissorRects(1, &scissorRect);
 
-	const float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	const float clearColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 	cmdList->ClearRenderTargetView(RTVHeap[0].CPUHandle, clearColor, 0, nullptr);
 	cmdList->OMSetRenderTargets(1, &RTVHeap[0].CPUHandle, FALSE, nullptr); // NEED CUSTOM RTV!
 
@@ -634,12 +634,12 @@ void CombinedBlurPassPX::InitResources(ID3D12Device5Ptr device)
 	texDesc.width = Globals.WindowDimensions.x;
 	texDesc.height = Globals.WindowDimensions.y;
 	texDesc.depth = 1;
-	texDesc.format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	texDesc.format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
 	texDesc.flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
 	texDesc.resDim = RESOURCE_DIMENSION_TEXTURE2D;
 	texDesc.viewDim = VIEW_DIMENSION_TEXTURE2D;
 	texDesc.initialResourceState = D3D12_RESOURCE_STATE_RENDER_TARGET;
-	texDesc.clearValue = { .Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, .Color = {0.0f, 0.0f, 0.0f, 0.0f} };
+	texDesc.clearValue = { .Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, .Color = {1.0f, 1.0f, 1.0f, 1.0f} };
 
 	Intermediate = MakeShared<DX::Texture>(&texDesc);
 	RTVBuffer = MakeShared<DX::Texture>(&texDesc);
@@ -719,7 +719,7 @@ void CombinedBlurPassPX::InitPipelineState()
 	psoDesc.SampleMask = UINT_MAX;
 	psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	psoDesc.NumRenderTargets = 1;
-	psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+	psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
 	psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
 	psoDesc.SampleDesc.Count = 1;
 
